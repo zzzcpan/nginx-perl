@@ -51,8 +51,8 @@ extern ngx_module_t  ngx_http_perl_module;
  * when building with perl 5.6.1
  */
 #ifndef PERL_IMPLICIT_CONTEXT
-#undef  dTHXa
-#define dTHXa(a)
+#  undef  dTHXa
+#  define dTHXa(a)
 #endif
 
 
@@ -80,7 +80,11 @@ void ngx_perl_timer_clear(ngx_connection_t *c);
 #define NGX_PERL_CONNECT     4
 #define NGX_PERL_CLOSE       8
 
-#define NGX_PERL_EOF        -1
+#ifndef EBADE
+#  define  EBADE  52
+#endif
+
+#define NGX_PERL_EOF         42   /* ENOMSG */
 #define NGX_PERL_EINVAL      EINVAL
 #define NGX_PERL_ENOMEM      ENOMEM
 #define NGX_PERL_EBADE       EBADE
@@ -89,11 +93,26 @@ void ngx_perl_timer_clear(ngx_connection_t *c);
 
 typedef struct {
     SV  *connect_cb;
+    SV  *read_buffer;
+    SV  *read_min;
+    SV  *read_max;
+    SV  *read_timeout;
+    SV  *read_cb;
+    SV  *write_buffer;
+    SV  *write_offset;
+    SV  *write_length;
+    SV  *write_timeout;
+    SV  *write_cb;
 } ngx_perl_connection_t;
 
 void ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb);
+void ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *offset, SV *length, 
+        SV *timeout, SV *cb);
+void ngx_perl_reader(ngx_connection_t *c, SV *buf, SV *min, SV *max, 
+        SV *timeout, SV *cb);
 void ngx_perl_close(ngx_connection_t *c);
-
+void ngx_perl_read(ngx_connection_t *c);
+void ngx_perl_write(ngx_connection_t *c);
 
 
 #endif /* _NGX_HTTP_PERL_MODULE_H_INCLUDED_ */

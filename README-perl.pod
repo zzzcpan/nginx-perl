@@ -1,0 +1,32 @@
+
+=head1 NAME
+
+nginx-perl - asynchronous connections for embedded perl
+
+=head1 DESCRIPTION
+
+
+
+=head1 INSTALLATION
+
+
+
+=head1 SEE ALSO
+
+L<http://nginx.net/>, 
+L<http://sysoev.ru/nginx/>
+
+=head1 AUTHOR
+
+Alexandr Gomoliako <zzz@zzz.org.ua>
+
+=head1 LICENSE
+
+Copyright 2011 Alexandr Gomoliako. All rights reserved.
+
+This module is free software. It may be used, redistributed and/or modified 
+under the same terms as B<nginx> itself.
+
+=cut
+
+

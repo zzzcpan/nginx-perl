@@ -1,4 +1,17 @@
+NAME
+    nginx-perl - asynchronous connections for embedded perl
 
-The Russian documentation is available at http://sysoev.ru/nginx/
-The English documentation is available at http://nginx.net
+DESCRIPTION
+INSTALLATION
+SEE ALSO
+    <http://nginx.net/>, <http://sysoev.ru/nginx/>
+
+AUTHOR
+    Alexandr Gomoliako <zzz@zzz.org.ua>
+
+LICENSE
+    Copyright 2011 Alexandr Gomoliako. All rights reserved.
+
+    This module is free software. It may be used, redistributed and/or
+    modified under the same terms as nginx itself.
 

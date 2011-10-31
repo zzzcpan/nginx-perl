@@ -1108,4 +1108,66 @@ ngx_connector(address, port, timeout, cb)
     ngx_perl_connector(ST(0), ST(1), ST(2), ST(3));
 
 
+void
+ngx_reader(c, buf, min, max, timeout, cb)
+    PROTOTYPE: $$$$$&
+    CODE:
+
+    ngx_connection_t  *c;
+
+    c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
+
+    ngx_perl_reader(c, ST(1), ST(2), ST(3), ST(4), ST(5));
+
+
+void
+ngx_writer(c, buf, offset, length, timeout, cb)
+    PROTOTYPE: $$$$$&
+    CODE:
+
+    ngx_connection_t  *c;
+
+    c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
+
+    ngx_perl_writer(c, ST(1), ST(2), ST(3), ST(4), ST(5));
+
+
+void
+ngx_close(c)
+    PROTOTYPE: $
+    CODE:
+
+    ngx_connection_t  *c;
+
+    c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
+
+    ngx_perl_close(c);
+
+
+void
+ngx_read(c)
+    PROTOTYPE: $
+    CODE:
+
+    ngx_connection_t  *c;
+
+    c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
+
+    ngx_perl_read(c);
+
+
+void
+ngx_write(c)
+    PROTOTYPE: $
+    CODE:
+
+    ngx_connection_t  *c;
+
+    c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
+
+    ngx_perl_write(c);
+    if (c->write->ready) {
+        c->write->handler(c->write);
+    }
+
 

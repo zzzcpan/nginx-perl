@@ -59,6 +59,8 @@ static void ngx_perl_timer_callback(ngx_event_t *ev);
 static void ngx_perl_connection_cleanup(void *data);
 static void ngx_perl_connect_handler(ngx_event_t *ev);
 static void ngx_perl_dummy_handler(ngx_event_t *ev);
+static void ngx_perl_read_handler(ngx_event_t *ev);
+static void ngx_perl_write_handler(ngx_event_t *ev);
 
 
 static ngx_command_t  ngx_http_perl_commands[] = {
@@ -149,6 +151,8 @@ static ngx_str_t         ngx_null_name = ngx_null_string;
 static HV               *nginx_stash;
 static PerlInterpreter  *my_perl;
 
+static ngx_log_t        *ngx_perl_log; 
+
 
 static void
 ngx_http_perl_xs_init(pTHX)
@@ -164,7 +168,11 @@ ngx_http_perl_handler(ngx_http_request_t *r)
 {
     r->main->count++;
 
+    ngx_perl_log = r->connection->log;
+
     ngx_http_perl_handle_request(r);
+
+    ngx_perl_log = ngx_cycle->log;
 
     return NGX_DONE;
 }
@@ -942,6 +950,8 @@ ngx_http_perl_init_worker(ngx_cycle_t *cycle)
         sv_setiv(GvSV(gv_fetchpv("$", TRUE, SVt_PV)), (I32) ngx_pid);
     }
 
+    ngx_perl_log = ngx_cycle->log;
+
     return NGX_OK;
 }
 
@@ -970,12 +980,12 @@ ngx_perl_timer(ngx_int_t after, SV *repeat, SV *cb)
 
     c = ngx_get_connection((ngx_socket_t) 0, ngx_cycle->log);
     if (c == NULL) {
-	return NULL;
+        return NULL;
     }
  
     Newz(0, t, 1, ngx_perl_timer_t);
     if (t == NULL) {
-	return NULL;
+        return NULL;
     }
 
     c->read->handler = ngx_perl_timer_callback;
@@ -1005,7 +1015,7 @@ ngx_perl_timer_clear(ngx_connection_t *c)
     if (c->destroyed) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
                       "ngx_perl_timer_clear: connection already destroyed");
-	return;
+        return;
     }
 
     t = (ngx_perl_timer_t *) c->data;
@@ -1014,7 +1024,7 @@ ngx_perl_timer_clear(ngx_connection_t *c)
     SvREFCNT_dec(t->cb);
 
     if (c->read->timer_set) {
-	ngx_del_timer(c->read);
+        ngx_del_timer(c->read);
     }
 
     safefree(t);
@@ -1047,15 +1057,13 @@ ngx_perl_timer_callback(ngx_event_t *ev)
     LEAVE;
 
     if (SvIV(t->repeat) > 0) {
-	ngx_add_timer(ev, SvIV(t->repeat) * 1000);
+        ngx_add_timer(ev, SvIV(t->repeat) * 1000);
     } else {
-	ngx_perl_timer_clear(c);
+        ngx_perl_timer_clear(c);
     }
 
     return;
 }
-
-
 
 
 void
@@ -1073,10 +1081,10 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     dSP;
 
     if (!SvPOK(address) || !SvIOK(port) || !SvIOK(timeout)) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, ngx_perl_log, 0,
                       "ngx_perl_connector: incorrect argument(s)");
-	errno = NGX_PERL_EINVAL;
-	goto FATAL;
+        errno = NGX_PERL_EINVAL;
+        goto FATAL;
     }
 
     inport = (in_port_t) SvIV(port);
@@ -1084,27 +1092,27 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     inaddr = ngx_inet_addr((u_char *) SvPV_nolen(address), SvCUR(address));
 
     if (inaddr == INADDR_NONE) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, ngx_perl_log, 0,
                       "ngx_perl_connector: incorrect address");
-	errno = NGX_PERL_EINVAL;
-	goto FATAL;
+        errno = NGX_PERL_EINVAL;
+        goto FATAL;
     }
 
-    pool = ngx_create_pool(1024, ngx_cycle->log);
+    pool = ngx_create_pool(1024, ngx_perl_log);
 
     if (pool == NULL) {
-	errno = NGX_PERL_ENOMEM;
-	goto FATAL;
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
     }
 
     sin = ngx_pcalloc(pool, sizeof(struct sockaddr_in));
 
     if (sin == NULL) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0,
                       "ngx_perl_connector: ngx_pcalloc() failed");
-	ngx_destroy_pool(pool);
-	errno = NGX_PERL_ENOMEM;
-	goto FATAL;
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
     }
 
     sin->sin_family      = AF_INET;
@@ -1116,21 +1124,21 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     plc = ngx_pcalloc(pool, sizeof(ngx_perl_connection_t));
 
     if (plc == NULL) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0,
                       "ngx_perl_connector: ngx_pcalloc() failed");
-	ngx_destroy_pool(pool);
-	errno = NGX_PERL_ENOMEM;
-	goto FATAL;
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
     }
 
     plccln = ngx_pool_cleanup_add(pool, 0);
 
     if (plccln == NULL) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0,
                       "ngx_perl_connector: ngx_pool_cleanup_add() failed");
-	ngx_destroy_pool(pool);
-	errno = NGX_PERL_ENOMEM;
-	goto FATAL;
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
     }
 
     plccln->data    = (void *) plc;
@@ -1141,11 +1149,11 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     peer = ngx_pcalloc(pool, sizeof(ngx_peer_connection_t));
 
     if (peer == NULL) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0,
                       "ngx_perl_connector: ngx_pcalloc() failed");
-	ngx_destroy_pool(pool);
-	errno = NGX_PERL_ENOMEM;
-	goto FATAL;
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
     }
 
     peer->sockaddr  = (struct sockaddr *) sin;
@@ -1158,21 +1166,21 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     peer->name = ngx_pcalloc(pool, sizeof(ngx_str_t));
 
     if (peer->name == NULL) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, peer->log, 0,
                       "ngx_perl_connector: ngx_pcalloc() failed");
-	ngx_destroy_pool(pool);
-	errno = NGX_PERL_ENOMEM;
-	goto FATAL;
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
     }
 
     peer->name->data = ngx_pcalloc(pool, SvCUR(address));
 
     if (peer->name->data == NULL) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, peer->log, 0,
                       "ngx_perl_connector: ngx_pcalloc() failed");
-	ngx_destroy_pool(pool);
-	errno = NGX_PERL_ENOMEM;
-	goto FATAL;
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
     }
 
     ngx_memcpy(peer->name->data, SvPVX(address), SvCUR(address));
@@ -1183,27 +1191,27 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     rc = ngx_event_connect_peer(peer);
 
     if (rc == NGX_ERROR || rc == NGX_BUSY || rc == NGX_DECLINED) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, peer->log, 0,
                       "ngx_perl_connector: ngx_event_connect_peer() failed");
 
-	if (peer->connection) 
-	    ngx_close_connection(peer->connection);
+        if (peer->connection) 
+            ngx_close_connection(peer->connection);
 
-	ngx_destroy_pool(pool);
+        ngx_destroy_pool(pool);
 
-	errno = NGX_PERL_EBADF;
-	goto FATAL;
+        errno = NGX_PERL_EBADF;
+        goto FATAL;
     }
 
 
     c = peer->connection;
 
     if (c == NULL) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0,
                       "ngx_perl_connector: no peer->connection");
-	ngx_destroy_pool(pool);
-	errno = NGX_PERL_EBADF;
-	goto FATAL;
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_EBADF;
+        goto FATAL;
     }
 
     c->pool = pool;
@@ -1216,12 +1224,12 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     c->write->handler = ngx_perl_connect_handler;
     c->read->handler  = ngx_perl_connect_handler;
 
-    if (rc == NGX_OK) {
-	c->write->handler(c->write);
-	return;
-    } 
+    ngx_add_timer(c->write, SvIOK(timeout) ? SvIV(timeout) * 1000 : 15000);
 
-    ngx_event_add_timer(c->write, SvIOK(timeout) ? SvIV(timeout) : 15);
+    if (rc == NGX_OK) {
+        c->write->handler(c->write);
+        return;
+    } 
 
     return;
 
@@ -1247,6 +1255,103 @@ FATAL:
 }
 
 
+void
+ngx_perl_reader(ngx_connection_t *c, SV *buf, SV *min, SV *max, 
+        SV *timeout, SV *cb) 
+{
+    ngx_perl_connection_t  *plc;
+
+    plc = (ngx_perl_connection_t *) c->data;
+
+    if (plc->read_min) {
+        SvREFCNT_dec(plc->read_min);
+        plc->read_min = NULL;
+    }
+
+    if (plc->read_max) {
+        SvREFCNT_dec(plc->read_max);
+        plc->read_max = NULL;
+    }
+
+    if (plc->read_timeout) {
+        SvREFCNT_dec(plc->read_timeout);
+        plc->read_timeout = NULL;
+    }
+
+    if (plc->read_buffer) {
+        SvREFCNT_dec(plc->read_buffer);
+        plc->read_buffer = NULL;
+    }
+
+    if (plc->read_cb) {
+        SvREFCNT_dec(plc->read_cb);
+        plc->read_cb = NULL;
+    }
+
+    plc->read_min     = min;
+    plc->read_max     = max;
+    plc->read_buffer  = buf;
+    plc->read_timeout = timeout;
+    plc->read_cb      = cb;
+
+    SvREFCNT_inc(min);
+    SvREFCNT_inc(max);
+    SvREFCNT_inc(buf);
+    SvREFCNT_inc(timeout);
+    SvREFCNT_inc(cb);
+
+    return;
+}
+
+
+void
+ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *offset, SV *length, 
+        SV *timeout, SV *cb) 
+{
+    ngx_perl_connection_t  *plc;
+
+    plc = (ngx_perl_connection_t *) c->data;
+
+    if (plc->write_offset) {
+        SvREFCNT_dec(plc->write_offset);
+        plc->write_offset = NULL;
+    }
+
+    if (plc->write_length) {
+        SvREFCNT_dec(plc->write_length);
+        plc->write_length = NULL;
+    }
+
+    if (plc->write_timeout) {
+        SvREFCNT_dec(plc->write_timeout);
+        plc->write_timeout = NULL;
+    }
+
+    if (plc->write_buffer) {
+        SvREFCNT_dec(plc->write_buffer);
+        plc->write_buffer = NULL;
+    }
+
+    if (plc->write_cb) {
+        SvREFCNT_dec(plc->write_cb);
+        plc->write_cb = NULL;
+    }
+
+    plc->write_offset  = offset;
+    plc->write_length  = length;
+    plc->write_buffer  = buf;
+    plc->write_timeout = timeout;
+    plc->write_cb      = cb;
+
+    SvREFCNT_inc(offset);
+    SvREFCNT_inc(length);
+    SvREFCNT_inc(buf);
+    SvREFCNT_inc(timeout);
+    SvREFCNT_inc(cb);
+
+    return;
+}
+
 static void
 ngx_perl_connection_cleanup(void *data)
 {
@@ -1254,9 +1359,176 @@ ngx_perl_connection_cleanup(void *data)
 
     plc = (ngx_perl_connection_t *) data;
 
+
     if (plc->connect_cb) {
         SvREFCNT_dec(plc->connect_cb);
-	plc->connect_cb = NULL;
+        plc->connect_cb = NULL;
+    }
+
+
+    if (plc->read_min) {
+        SvREFCNT_dec(plc->read_min);
+        plc->read_min = NULL;
+    }
+
+    if (plc->read_max) {
+        SvREFCNT_dec(plc->read_max);
+        plc->read_max = NULL;
+    }
+
+    if (plc->read_timeout) {
+        SvREFCNT_dec(plc->read_timeout);
+        plc->read_timeout = NULL;
+    }
+
+    if (plc->read_buffer) {
+        SvREFCNT_dec(plc->read_buffer);
+        plc->read_buffer = NULL;
+    }
+
+    if (plc->read_cb) {
+        SvREFCNT_dec(plc->read_cb);
+        plc->read_cb = NULL;
+    }
+
+
+    if (plc->write_offset) {
+        SvREFCNT_dec(plc->write_offset);
+        plc->write_offset = NULL;
+    }
+
+    if (plc->write_length) {
+        SvREFCNT_dec(plc->write_length);
+        plc->write_length = NULL;
+    }
+
+    if (plc->write_timeout) {
+        SvREFCNT_dec(plc->write_timeout);
+        plc->write_timeout = NULL;
+    }
+
+    if (plc->write_buffer) {
+        SvREFCNT_dec(plc->write_buffer);
+        plc->write_buffer = NULL;
+    }
+
+    if (plc->write_cb) {
+        SvREFCNT_dec(plc->write_cb);
+        plc->write_cb = NULL;
+    }
+
+
+    return;
+}
+
+
+void
+ngx_perl_close(ngx_connection_t *c) 
+{
+    ngx_pool_t  *pool;
+
+    if (c->destroyed) {
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_close: "
+            "connection already destroyed");
+        return;
+    }
+
+    pool = c->pool; 
+
+    ngx_close_connection(c);
+    ngx_destroy_pool(pool);
+
+    return;
+}
+
+
+void
+ngx_perl_read(ngx_connection_t *c) 
+{
+    ngx_perl_connection_t  *plc;
+
+    plc = (ngx_perl_connection_t *) c->data;
+   
+    if (c->read->timer_set) {
+        ngx_del_timer(c->read);
+    }
+
+    c->read->handler  = ngx_perl_read_handler;
+    c->write->handler = ngx_perl_dummy_handler;
+
+    if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+
+        if (c->read->error == 0) 
+            c->read->error = 1;
+
+        c->read->handler(c->read);
+        return;
+    }
+
+    if (!c->read->timer_set) {
+
+        if (plc->read_timeout != NULL  && 
+            SvOK  (plc->read_timeout)  && 
+            SvIOK (plc->read_timeout)  && 
+            SvIV  (plc->read_timeout) >= 0) 
+        {
+            ngx_add_timer(c->read, SvIV(plc->read_timeout) * 1000);
+
+        } else {
+
+            ngx_log_error(NGX_LOG_ERR, c->log, 0,
+                "ngx_perl_read: "
+                "incorrent read timeout, using 15 s instead");
+
+            ngx_add_timer(c->read, 15000);
+        }
+    }
+
+    return;
+}
+
+
+void
+ngx_perl_write(ngx_connection_t *c) 
+{
+    ngx_perl_connection_t  *plc;
+
+    plc = (ngx_perl_connection_t *) c->data;
+
+    if (c->write->timer_set) {
+        ngx_del_timer(c->write);
+    }
+
+    c->read->handler  = ngx_perl_read_handler;
+    c->write->handler = ngx_perl_write_handler;
+
+    if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
+
+        if (c->write->error == 0) 
+            c->write->error = 1;
+
+        c->write->handler(c->write);
+        return;
+    }
+
+    if (!c->write->timer_set) {
+
+        if (plc->write_timeout != NULL  && 
+            SvOK  (plc->write_timeout)  && 
+            SvIOK (plc->write_timeout)  && 
+            SvIV  (plc->write_timeout) >= 0) 
+        {
+            ngx_add_timer(c->write, SvIV(plc->write_timeout) * 1000);
+
+        } else {
+
+            ngx_log_error(NGX_LOG_ERR, c->log, 0,
+                "ngx_perl_write: "
+                "incorrent write timeout, using 15 s instead");
+
+            ngx_add_timer(c->write, 15000);
+        }
     }
 
     return;
@@ -1266,6 +1538,12 @@ ngx_perl_connection_cleanup(void *data)
 static void
 ngx_perl_dummy_handler(ngx_event_t *ev) 
 {
+    ngx_connection_t  *c;
+
+    c = (ngx_connection_t *) ev->data;
+
+    ngx_log_debug(NGX_LOG_DEBUG, c->log, 0,
+        "ngx_perl_dummy_handler called");
 
     return;
 }
@@ -1285,19 +1563,18 @@ ngx_perl_connect_handler(ngx_event_t *ev)
     c->read->handler  = ngx_perl_dummy_handler;
     c->write->handler = ngx_perl_dummy_handler;
 
-    if (ev->timedout) {
-	c->timedout = 1;
-	errno = NGX_PERL_ETIMEDOUT;
-	goto CALLBACK;
+    if (ev->timer_set) {
+        ngx_del_timer(ev);
     }
 
-    if (c->write->timer_set) {
-	ngx_del_timer(c->write);
+    if (ev->timedout) {
+        errno = NGX_PERL_ETIMEDOUT;
+        goto CALLBACK;
     }
 
     if (ev->error || c->error) {
-	errno = NGX_PERL_EBADE;
-	goto CALLBACK;
+        errno = NGX_PERL_EBADE;
+        goto CALLBACK;
     }
 
     errno = 0;
@@ -1316,9 +1593,10 @@ CALLBACK:
     count = call_sv(plc->connect_cb, G_VOID|G_SCALAR); 
 
     if (count != 1) {
-	ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
-                     "ngx_perl_connect: call_sv returned wrong count = %i",
-		     count);
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_connect_handler: "
+            "call_sv returned wrong count = %i",
+            count);
     }
 
     SPAGAIN;
@@ -1331,41 +1609,291 @@ CALLBACK:
     SvREFCNT_dec(plc->connect_cb);
     errno = 0;
 
-    if ((ev->error || ev->timedout) && cmd != NGX_PERL_CLOSE) {
-	ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
-                     "ngx_perl_connect: NGX_CLOSE required on error, forcing");
-	ngx_perl_close(c);
-	return;
+    if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_connect_handler: "
+            "NGX_CLOSE required on error, forcing");
+        ngx_perl_close(c);
+        return;
     }
 
     switch (cmd) {
-	case NGX_PERL_CLOSE:
-	    ngx_perl_close(c);
-	    break;
-	case NGX_PERL_READ:
-	case NGX_PERL_WRITE:
-	    break;
+        case NGX_PERL_CLOSE:
+            ngx_perl_close(c);
+            break;
+        case NGX_PERL_READ:
+            ngx_perl_read(c);
+            if (c->read->ready) {
+                c->read->handler(c->read);
+            }
+            break;
+        case NGX_PERL_WRITE:
+            ngx_perl_write(c);
+            if (c->write->ready) {
+                c->write->handler(c->write);
+            }
+            break;
     }
 
     return;
 }
 
 
-void
-ngx_perl_close(ngx_connection_t *c) 
+static void
+ngx_perl_read_handler(ngx_event_t *ev)
 {
-    ngx_pool_t  *pool;
+    ssize_t                 n;
+    ngx_connection_t       *c;
+    ngx_perl_connection_t  *plc;
+    SV                     *sv;
+    ngx_int_t               cmd, count;
+    dSP;
 
-    if (c->destroyed) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0,
-                      "ngx_perl_close: connection already destroyed");
-	return;
+    c   = (ngx_connection_t *) ev->data;
+    plc = (ngx_perl_connection_t *) c->data;
+
+    if (ev->timer_set) {
+        ngx_del_timer(ev);
     }
 
-    pool = c->pool; 
+    if (ev->timedout) {
+        errno = NGX_PERL_ETIMEDOUT;
+        goto CALLBACK;
+    }
 
-    ngx_close_connection(c);
-    ngx_destroy_pool(pool);
+AGAIN:
+
+    if (ev->error || c->error) {
+        errno = NGX_PERL_EBADE;
+        goto CALLBACK;
+    }
+
+    sv = plc->read_buffer;
+
+    SvPOK_on(sv);
+    SvGROW(sv, SvLEN(sv) + 65536);
+    
+    for ( ;; ) {
+
+        ngx_socket_errno = 0;
+
+        n = c->recv(c, (u_char *) SvPVX(sv) + SvCUR(sv), 
+                       SvLEN(sv) - SvCUR(sv) - 1);
+
+        if (n == NGX_AGAIN) {
+
+            if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+                errno = NGX_PERL_EBADE;
+                goto CALLBACK;
+            }
+
+            return;
+        }
+
+        if (n == 0) {
+            errno = NGX_PERL_EOF;
+            goto CALLBACK;
+        }
+
+        if (n == NGX_ERROR) {
+            errno = ngx_socket_errno ? ngx_socket_errno : NGX_PERL_EBADE;
+            goto CALLBACK;
+        }
+
+        SvCUR_set(sv, SvCUR(sv) + n);
+
+        break;
+    }
+
+    errno = 0;
+
+CALLBACK:
+
+    SvREFCNT_inc(plc->read_cb);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+    XPUSHs(sv_2mortal(newSViv(PTR2IV(c)))); 
+    PUTBACK;
+
+    ngx_log_debug(NGX_LOG_DEBUG, c->log, 0,
+        "ngx_perl_read_handler: "
+        "ev->eof = %i, ev->error = %i, c->error = %i",
+        ev->eof, ev->error, c->error);
+
+    count = call_sv(plc->read_cb, G_VOID|G_SCALAR); 
+
+    if (count != 1) {
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_read_handler: "
+            "call_sv returned wrong count = %i",
+            count);
+    }
+
+    SPAGAIN;
+    cmd = POPi;
+    PUTBACK;
+
+    FREETMPS;
+    LEAVE;
+
+    SvREFCNT_dec(plc->read_cb);
+    errno = 0;
+
+    if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_read_handler: "
+            "NGX_CLOSE required on error, forcing");
+        ngx_perl_close(c);
+        return;
+    }
+
+    switch (cmd) {
+        case NGX_PERL_CLOSE:
+            ngx_perl_close(c);
+            break;
+        case NGX_PERL_READ:
+            ngx_perl_read(c);
+            if (c->read->ready) {
+                goto AGAIN;
+            }
+            break;
+        case NGX_PERL_WRITE:
+            ngx_perl_write(c);
+            if (c->write->ready) {
+                c->write->handler(c->write);
+            }
+            break;
+    }
+
+    return;
+}
+
+
+static void
+ngx_perl_write_handler(ngx_event_t *ev)
+{
+    ssize_t                 n;
+    ngx_connection_t       *c;
+    ngx_perl_connection_t  *plc;
+    SV                     *sv;
+    ngx_int_t               cmd, count;
+    dSP;
+
+    c   = (ngx_connection_t *) ev->data;
+    plc = (ngx_perl_connection_t *) c->data;
+
+    if (ev->timer_set) {
+        ngx_del_timer(ev);
+    }
+
+    if (ev->timedout) {
+        errno = NGX_PERL_ETIMEDOUT;
+        goto CALLBACK;
+    }
+
+AGAIN:
+
+    if (ev->error || c->error) {
+        errno = NGX_PERL_EBADE;
+        goto CALLBACK;
+    }
+
+    sv = plc->write_buffer;
+
+    for ( ;; ) {
+
+        ngx_socket_errno = 0;
+
+        n = c->send(c, (u_char *) SvPV_nolen(sv), SvCUR(sv)); 
+
+        if (n == NGX_AGAIN) {
+
+            if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
+                errno = NGX_PERL_EBADE;
+                goto CALLBACK;
+            }
+
+            return;
+        }
+
+        if (n == 0) {
+            errno = NGX_PERL_EOF;
+            goto CALLBACK;
+        }
+
+        if (n == NGX_ERROR) {
+            errno = ngx_socket_errno ? ngx_socket_errno : NGX_PERL_EBADE;
+            goto CALLBACK;
+        }
+
+        sv_chop(sv, SvPVX(sv) + n);
+
+        if (SvCUR(sv) > 0) {
+            continue;
+        }
+
+        break;
+    }
+
+    SvOOK_off(sv);
+
+    errno = 0;
+
+CALLBACK:
+
+    SvREFCNT_inc(plc->write_cb);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+    XPUSHs(sv_2mortal(newSViv(PTR2IV(c)))); 
+    PUTBACK;
+
+    count = call_sv(plc->write_cb, G_VOID|G_SCALAR); 
+
+    if (count != 1) {
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_write_handler: "
+            "call_sv returned wrong count = %i",
+            count);
+    }
+
+    SPAGAIN;
+    cmd = POPi;
+    PUTBACK;
+
+    FREETMPS;
+    LEAVE;
+
+    SvREFCNT_dec(plc->write_cb);
+    errno = 0;
+
+    if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_write_handler: "
+            "NGX_CLOSE required on error, forcing");
+        ngx_perl_close(c);
+        return;
+    }
+
+    switch (cmd) {
+        case NGX_PERL_CLOSE:
+            ngx_perl_close(c);
+            break;
+        case NGX_PERL_READ:
+            ngx_perl_read(c);
+            break;
+        case NGX_PERL_WRITE:
+            ngx_perl_write(c);
+            if (c->write->ready) {
+                goto AGAIN;
+            }
+            break;
+    }
 
     return;
 }

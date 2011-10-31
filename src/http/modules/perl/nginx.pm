@@ -1,25 +1,34 @@
 package nginx;
 
-use 5.006001;
 use strict;
 use warnings;
 
 require Exporter;
-
-our @ISA = qw(Exporter);
-
+our @ISA    = qw(Exporter);
 our @EXPORT = qw(
+
     ngx_timer
-    ngx_timer_clear
     ngx_connector
+    ngx_reader
+    ngx_writer
+    ngx_read
+    ngx_write
+    ngx_close
+
+    NGX_READ
+    NGX_WRITE
+    NGX_CLOSE
+    NGX_EOF
+    NGX_EINVAL
+    NGX_ENOMEM
+    NGX_ETIMEDOUT
+    NGX_EBADE
+    NGX_EBADF
 
     NGX_DONE
     NGX_OK
     NGX_HTTP_LAST
 
-    NGX_READ
-    NGX_WRITE
-    NGX_CLOSE
 
     OK
     DECLINED
