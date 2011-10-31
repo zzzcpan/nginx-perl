@@ -1,0 +1,10 @@
+objs/
+Makefile
+*.core
+CHANGES.ru
+tmp/
+example/logs/
+*_temp
+.hg*
+example/
+trace.sh
