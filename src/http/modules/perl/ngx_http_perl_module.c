@@ -168,11 +168,7 @@ ngx_http_perl_handler(ngx_http_request_t *r)
 {
     r->main->count++;
 
-    /* ngx_perl_log = r->connection->log; */
-
     ngx_http_perl_handle_request(r);
-
-    /* ngx_perl_log = ngx_cycle->log; */
 
     return NGX_DONE;
 }
@@ -1542,6 +1538,7 @@ ngx_perl_connect_handler(ngx_event_t *ev)
     ngx_connection_t       *c;
     ngx_perl_connection_t  *plc;
     ngx_int_t               cmd, count;
+    SV                     *cb;
     dSP;
 
     c   = (ngx_connection_t *)      ev->data;
@@ -1568,7 +1565,9 @@ ngx_perl_connect_handler(ngx_event_t *ev)
 
 CALLBACK:
 
-    SvREFCNT_inc(plc->connect_cb);
+    cb = plc->connect_cb;
+
+    SvREFCNT_inc(cb);
 
     ENTER;
     SAVETMPS;
@@ -1577,7 +1576,7 @@ CALLBACK:
     XPUSHs(sv_2mortal(newSViv(PTR2IV(c)))); 
     PUTBACK;
 
-    count = call_sv(plc->connect_cb, G_VOID|G_SCALAR); 
+    count = call_sv(cb, G_VOID|G_SCALAR); 
 
     if (count != 1) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
@@ -1593,7 +1592,7 @@ CALLBACK:
     FREETMPS;
     LEAVE;
 
-    SvREFCNT_dec(plc->connect_cb);
+    SvREFCNT_dec(cb);
     errno = 0;
 
     if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
