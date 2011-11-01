@@ -1080,7 +1080,7 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     ngx_int_t               rc;
     dSP;
 
-    if (!SvPOK(address) || !SvIOK(port) || !SvIOK(timeout)) {
+    if (!SvOK(address) || !SvOK(port) || !SvOK(timeout)) {
         ngx_log_error(NGX_LOG_ERR, ngx_perl_log, 0,
                       "ngx_perl_connector: incorrect argument(s)");
         errno = NGX_PERL_EINVAL;
@@ -1224,7 +1224,8 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     c->write->handler = ngx_perl_connect_handler;
     c->read->handler  = ngx_perl_connect_handler;
 
-    ngx_add_timer(c->write, SvIOK(timeout) ? SvIV(timeout) * 1000 : 15000);
+    ngx_add_timer(c->write, SvOK(timeout) && SvIV(timeout) 
+                                ? SvIV(timeout) * 1000 : 15000);
 
     if (rc == NGX_OK) {
         c->write->handler(c->write);
@@ -1305,22 +1306,11 @@ ngx_perl_reader(ngx_connection_t *c, SV *buf, SV *min, SV *max,
 
 
 void
-ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *offset, SV *length, 
-        SV *timeout, SV *cb) 
+ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *timeout, SV *cb) 
 {
     ngx_perl_connection_t  *plc;
 
     plc = (ngx_perl_connection_t *) c->data;
-
-    if (plc->write_offset) {
-        SvREFCNT_dec(plc->write_offset);
-        plc->write_offset = NULL;
-    }
-
-    if (plc->write_length) {
-        SvREFCNT_dec(plc->write_length);
-        plc->write_length = NULL;
-    }
 
     if (plc->write_timeout) {
         SvREFCNT_dec(plc->write_timeout);
@@ -1337,14 +1327,10 @@ ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *offset, SV *length,
         plc->write_cb = NULL;
     }
 
-    plc->write_offset  = offset;
-    plc->write_length  = length;
     plc->write_buffer  = buf;
     plc->write_timeout = timeout;
     plc->write_cb      = cb;
 
-    SvREFCNT_inc(offset);
-    SvREFCNT_inc(length);
     SvREFCNT_inc(buf);
     SvREFCNT_inc(timeout);
     SvREFCNT_inc(cb);
@@ -1391,16 +1377,6 @@ ngx_perl_connection_cleanup(void *data)
         plc->read_cb = NULL;
     }
 
-
-    if (plc->write_offset) {
-        SvREFCNT_dec(plc->write_offset);
-        plc->write_offset = NULL;
-    }
-
-    if (plc->write_length) {
-        SvREFCNT_dec(plc->write_length);
-        plc->write_length = NULL;
-    }
 
     if (plc->write_timeout) {
         SvREFCNT_dec(plc->write_timeout);
@@ -1470,7 +1446,6 @@ ngx_perl_read(ngx_connection_t *c)
 
         if (plc->read_timeout != NULL  && 
             SvOK  (plc->read_timeout)  && 
-            SvIOK (plc->read_timeout)  && 
             SvIV  (plc->read_timeout) >= 0) 
         {
             ngx_add_timer(c->read, SvIV(plc->read_timeout) * 1000);
@@ -1496,6 +1471,8 @@ ngx_perl_write(ngx_connection_t *c)
 
     plc = (ngx_perl_connection_t *) c->data;
 
+    plc->write_offset = 0;
+
     if (c->write->timer_set) {
         ngx_del_timer(c->write);
     }
@@ -1516,7 +1493,6 @@ ngx_perl_write(ngx_connection_t *c)
 
         if (plc->write_timeout != NULL  && 
             SvOK  (plc->write_timeout)  && 
-            SvIOK (plc->write_timeout)  && 
             SvIV  (plc->write_timeout) >= 0) 
         {
             ngx_add_timer(c->write, SvIV(plc->write_timeout) * 1000);
@@ -1646,6 +1622,7 @@ ngx_perl_read_handler(ngx_event_t *ev)
     ngx_connection_t       *c;
     ngx_perl_connection_t  *plc;
     SV                     *sv;
+    U32                     min, max;
     ngx_int_t               cmd, count;
     dSP;
 
@@ -1668,17 +1645,45 @@ AGAIN:
         goto CALLBACK;
     }
 
+
+    min = 0;
+    max = 0;
+
+    if (  SvOK ( plc->read_min ) && 
+          SvIV ( plc->read_min )     ) 
+        min = SvIV ( plc->read_min );
+
+    if (  SvOK ( plc->read_max ) && 
+          SvIV ( plc->read_max )     ) 
+        max = SvIV ( plc->read_max );
+
+
     sv = plc->read_buffer;
 
     SvPOK_on(sv);
-    SvGROW(sv, SvLEN(sv) + 65536);
+
+    if ( SvLEN(sv) - SvCUR(sv) < 1500) {
+        if ( max ) {
+            if ( SvLEN(sv) < max + 1 ) {
+                SvGROW(sv, ( SvCUR(sv) * 2 ) + 1500);
+            } else {
+                if ( SvCUR(sv) >= max ) {
+                    goto CALLBACK;
+                }
+            }
+        } else {
+            SvGROW(sv, ( SvCUR(sv) * 2 ) + 1500);
+        }
+    }
+
     
     for ( ;; ) {
 
         ngx_socket_errno = 0;
 
-        n = c->recv(c, (u_char *) SvPVX(sv) + SvCUR(sv), 
-                       SvLEN(sv) - SvCUR(sv) - 1);
+        n = c->recv(c, (u_char *) SvPVX (sv) + SvCUR (sv), 
+                       ( max && SvLEN (sv) > max 
+                               ? max : SvLEN (sv) ) - SvCUR (sv) - 1);
 
         if (n == NGX_AGAIN) {
 
@@ -1700,7 +1705,11 @@ AGAIN:
             goto CALLBACK;
         }
 
-        SvCUR_set(sv, SvCUR(sv) + n);
+        SvCUR_set (sv, SvCUR (sv) + n);
+
+        if ( SvCUR (sv) < min ) {
+            continue;
+        }
 
         break;
     }
@@ -1807,7 +1816,8 @@ AGAIN:
 
         ngx_socket_errno = 0;
 
-        n = c->send(c, (u_char *) SvPV_nolen(sv), SvCUR(sv)); 
+        n = c->send(c, (u_char *) SvPV_nolen (sv) + plc->write_offset, 
+                                  SvCUR (sv) - plc->write_offset); 
 
         if (n == NGX_AGAIN) {
 
@@ -1829,20 +1839,20 @@ AGAIN:
             goto CALLBACK;
         }
 
-        sv_chop(sv, SvPVX(sv) + n);
+        plc->write_offset += n;
 
-        if (SvCUR(sv) > 0) {
+        if (SvCUR(sv) - plc->write_offset > 0) {
             continue;
         }
 
         break;
     }
 
-    SvOOK_off(sv);
-
     errno = 0;
 
 CALLBACK:
+
+    plc->write_offset = 0;
 
     SvREFCNT_inc(plc->write_cb);
 

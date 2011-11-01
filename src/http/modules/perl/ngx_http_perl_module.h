@@ -92,22 +92,20 @@ void ngx_perl_timer_clear(ngx_connection_t *c);
 #define NGX_PERL_ETIMEDOUT   ETIMEDOUT
 
 typedef struct {
-    SV  *connect_cb;
-    SV  *read_buffer;
-    SV  *read_min;
-    SV  *read_max;
-    SV  *read_timeout;
-    SV  *read_cb;
-    SV  *write_buffer;
-    SV  *write_offset;
-    SV  *write_length;
-    SV  *write_timeout;
-    SV  *write_cb;
+    SV       *connect_cb;
+    SV       *read_buffer;
+    SV       *read_min;
+    SV       *read_max;
+    SV       *read_timeout;
+    SV       *read_cb;
+    SV       *write_buffer;
+    ssize_t   write_offset;
+    SV       *write_timeout;
+    SV       *write_cb;
 } ngx_perl_connection_t;
 
 void ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb);
-void ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *offset, SV *length, 
-        SV *timeout, SV *cb);
+void ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *timeout, SV *cb);
 void ngx_perl_reader(ngx_connection_t *c, SV *buf, SV *min, SV *max, 
         SV *timeout, SV *cb);
 void ngx_perl_close(ngx_connection_t *c);

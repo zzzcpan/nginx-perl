@@ -1121,15 +1121,15 @@ ngx_reader(c, buf, min, max, timeout, cb)
 
 
 void
-ngx_writer(c, buf, offset, length, timeout, cb)
-    PROTOTYPE: $$$$$&
+ngx_writer(c, buf, timeout, cb)
+    PROTOTYPE: $$$&
     CODE:
 
     ngx_connection_t  *c;
 
     c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
 
-    ngx_perl_writer(c, ST(1), ST(2), ST(3), ST(4), ST(5));
+    ngx_perl_writer(c, ST(1), ST(2), ST(3));
 
 
 void
