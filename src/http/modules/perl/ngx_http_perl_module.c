@@ -168,11 +168,11 @@ ngx_http_perl_handler(ngx_http_request_t *r)
 {
     r->main->count++;
 
-    ngx_perl_log = r->connection->log;
+    /* ngx_perl_log = r->connection->log; */
 
     ngx_http_perl_handle_request(r);
 
-    ngx_perl_log = ngx_cycle->log;
+    /* ngx_perl_log = ngx_cycle->log; */
 
     return NGX_DONE;
 }
@@ -1511,6 +1511,17 @@ ngx_perl_write(ngx_connection_t *c)
 }
 
 
+void
+ngx_perl_noop(ngx_connection_t *c) 
+{
+
+    c->read->handler  = ngx_perl_dummy_handler;
+    c->write->handler = ngx_perl_dummy_handler;
+
+    return;
+}
+
+
 static void
 ngx_perl_dummy_handler(ngx_event_t *ev) 
 {
@@ -1609,6 +1620,9 @@ CALLBACK:
                 c->write->handler(c->write);
             }
             break;
+        case NGX_PERL_NOOP:
+            ngx_perl_noop(c);
+            break;
     }
 
     return;
@@ -1621,7 +1635,7 @@ ngx_perl_read_handler(ngx_event_t *ev)
     ssize_t                 n;
     ngx_connection_t       *c;
     ngx_perl_connection_t  *plc;
-    SV                     *sv;
+    SV                     *sv, *cb;
     U32                     min, max;
     ngx_int_t               cmd, count;
     dSP;
@@ -1683,7 +1697,7 @@ AGAIN:
 
         n = c->recv(c, (u_char *) SvPVX (sv) + SvCUR (sv), 
                        ( max && SvLEN (sv) > max 
-                               ? max : SvLEN (sv) ) - SvCUR (sv) - 1);
+                               ? max + 1 : SvLEN (sv) ) - SvCUR (sv) - 1);
 
         if (n == NGX_AGAIN) {
 
@@ -1718,7 +1732,9 @@ AGAIN:
 
 CALLBACK:
 
-    SvREFCNT_inc(plc->read_cb);
+    cb = plc->read_cb;
+
+    SvREFCNT_inc(cb);
 
     ENTER;
     SAVETMPS;
@@ -1732,7 +1748,7 @@ CALLBACK:
         "ev->eof = %i, ev->error = %i, c->error = %i",
         ev->eof, ev->error, c->error);
 
-    count = call_sv(plc->read_cb, G_VOID|G_SCALAR); 
+    count = call_sv(cb, G_VOID|G_SCALAR); 
 
     if (count != 1) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
@@ -1748,7 +1764,7 @@ CALLBACK:
     FREETMPS;
     LEAVE;
 
-    SvREFCNT_dec(plc->read_cb);
+    SvREFCNT_dec(cb);
     errno = 0;
 
     if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
@@ -1775,6 +1791,9 @@ CALLBACK:
                 c->write->handler(c->write);
             }
             break;
+        case NGX_PERL_NOOP:
+            ngx_perl_noop(c);
+            break;
     }
 
     return;
@@ -1787,7 +1806,7 @@ ngx_perl_write_handler(ngx_event_t *ev)
     ssize_t                 n;
     ngx_connection_t       *c;
     ngx_perl_connection_t  *plc;
-    SV                     *sv;
+    SV                     *sv, *cb;
     ngx_int_t               cmd, count;
     dSP;
 
@@ -1854,7 +1873,9 @@ CALLBACK:
 
     plc->write_offset = 0;
 
-    SvREFCNT_inc(plc->write_cb);
+    cb = plc->write_cb;
+
+    SvREFCNT_inc(cb);
 
     ENTER;
     SAVETMPS;
@@ -1863,7 +1884,7 @@ CALLBACK:
     XPUSHs(sv_2mortal(newSViv(PTR2IV(c)))); 
     PUTBACK;
 
-    count = call_sv(plc->write_cb, G_VOID|G_SCALAR); 
+    count = call_sv(cb, G_VOID|G_SCALAR); 
 
     if (count != 1) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
@@ -1879,7 +1900,7 @@ CALLBACK:
     FREETMPS;
     LEAVE;
 
-    SvREFCNT_dec(plc->write_cb);
+    SvREFCNT_dec(cb);
     errno = 0;
 
     if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
@@ -1902,6 +1923,9 @@ CALLBACK:
             if (c->write->ready) {
                 goto AGAIN;
             }
+            break;
+        case NGX_PERL_NOOP:
+            ngx_perl_noop(c);
             break;
     }
 

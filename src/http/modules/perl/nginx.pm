@@ -14,10 +14,12 @@ our @EXPORT = qw(
     ngx_read
     ngx_write
     ngx_close
+    ngx_noop
 
     NGX_READ
     NGX_WRITE
     NGX_CLOSE
+    NGX_NOOP
     NGX_EOF
     NGX_EINVAL
     NGX_ENOMEM

@@ -111,6 +111,7 @@ void ngx_perl_reader(ngx_connection_t *c, SV *buf, SV *min, SV *max,
 void ngx_perl_close(ngx_connection_t *c);
 void ngx_perl_read(ngx_connection_t *c);
 void ngx_perl_write(ngx_connection_t *c);
+void ngx_perl_noop(ngx_connection_t *c);
 
 
 #endif /* _NGX_HTTP_PERL_MODULE_H_INCLUDED_ */

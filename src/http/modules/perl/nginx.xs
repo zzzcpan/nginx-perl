@@ -1171,3 +1171,15 @@ ngx_write(c)
     }
 
 
+void
+ngx_noop(c)
+    PROTOTYPE: $
+    CODE:
+
+    ngx_connection_t  *c;
+
+    c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
+
+    ngx_perl_noop(c);
+
+
