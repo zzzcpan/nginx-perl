@@ -1681,6 +1681,7 @@ AGAIN:
                 SvGROW(sv, ( SvCUR(sv) * 2 ) + 1500);
             } else {
                 if ( SvCUR(sv) >= max ) {
+                    errno = NGX_PERL_ENOMEM;
                     goto CALLBACK;
                 }
             }
