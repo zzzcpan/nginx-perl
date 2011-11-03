@@ -1068,6 +1068,7 @@ ngx_log_error(errno, message)
         ngx_log_notice = 1
         ngx_log_info   = 2
         ngx_log_crit   = 3
+        ngx_log_alert  = 4
     CODE:
         ngx_int_t  level;
  
@@ -1080,6 +1081,9 @@ ngx_log_error(errno, message)
                 break;
             case 3:
                 level = NGX_LOG_CRIT;
+                break;
+            case 4:
+                level = NGX_LOG_ALERT;
                 break;
             default:
                 level = NGX_LOG_ERR;

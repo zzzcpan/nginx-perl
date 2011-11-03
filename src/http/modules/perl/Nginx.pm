@@ -11,6 +11,7 @@ our @EXPORT = qw(
     ngx_log_notice
     ngx_log_info
     ngx_log_crit
+    ngx_log_alert
 
     ngx_timer
     ngx_connector
