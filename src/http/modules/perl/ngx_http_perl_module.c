@@ -1674,30 +1674,29 @@ AGAIN:
     sv = plc->read_buffer;
 
     SvPOK_on(sv);
-
-    if ( SvLEN(sv) - SvCUR(sv) < 1500) {
-        if ( max ) {
-            if ( SvLEN(sv) < max + 1 ) {
-                SvGROW(sv, ( SvCUR(sv) * 2 ) + 1500);
-            } else {
-                if ( SvCUR(sv) >= max ) {
-                    errno = NGX_PERL_ENOMEM;
-                    goto CALLBACK;
-                }
-            }
-        } else {
-            SvGROW(sv, ( SvCUR(sv) * 2 ) + 1500);
-        }
-    }
-
     
     for ( ;; ) {
+
+        if ( SvLEN(sv) - SvCUR(sv) < 1500) {
+            if ( max ) {
+                if ( SvLEN(sv) < max + 1 ) {
+                    SvGROW(sv, ( SvCUR(sv) * 2 ) + 1500);
+                } else {
+                    if ( SvCUR(sv) >= max ) {
+                        errno = NGX_PERL_ENOMEM;
+                        goto CALLBACK;
+                    }
+                }
+            } else {
+                SvGROW(sv, ( SvCUR(sv) * 2 ) + 1500);
+            }
+        }
 
         ngx_socket_errno = 0;
 
         n = c->recv(c, (u_char *) SvPVX (sv) + SvCUR (sv), 
                        ( max && SvLEN (sv) > max 
-                               ? max + 1 : SvLEN (sv) ) - SvCUR (sv) - 1);
+                               ? max : SvLEN (sv) - 1 ) - SvCUR (sv));
 
         if (n == NGX_AGAIN) {
 
