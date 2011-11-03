@@ -144,13 +144,13 @@ sub http_req ($$\$$&) {
             push @{$h{ lc($1) }}, $2
                 while 
                     $$buf_ref =~ / 
-                          \s*  ( [\w-]+ )   
+                      \G  \s*  ( [a-zA-Z][\w-]+ ) 
                           \s*   : 
-                          \s*  ( [^\x0d\x0a]+ )  
+                          \s*  ( [^\x0d\x0a]+ ) 
                           \x0d?\x0a 
                       /gcx;
 
-            $$buf_ref =~ / \x0d?\x0a /gcx;
+            $$buf_ref =~ / \G \x0d?\x0a /gcx;
             $$buf_ref = substr $$buf_ref, pos($$buf_ref);
 
             my $len = $h{'content-length'}->[0];
