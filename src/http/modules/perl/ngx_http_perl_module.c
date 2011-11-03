@@ -151,7 +151,7 @@ static ngx_str_t         ngx_null_name = ngx_null_string;
 static HV               *nginx_stash;
 static PerlInterpreter  *my_perl;
 
-static ngx_log_t        *ngx_perl_log; 
+       ngx_log_t        *ngx_perl_log; 
 
 
 static void

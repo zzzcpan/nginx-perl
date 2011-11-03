@@ -1061,6 +1061,42 @@ location_name(r)
         RETVAL
 
 
+void
+ngx_log_error(errno, message)
+    PROTOTYPE: $$
+    ALIAS:
+        ngx_log_notice = 1
+        ngx_log_info   = 2
+        ngx_log_crit   = 3
+    CODE:
+        ngx_int_t  level;
+ 
+        switch (ix) {
+            case 1:
+                level = NGX_LOG_NOTICE;
+                break;
+            case 2:
+                level = NGX_LOG_INFO;
+                break;
+            case 3:
+                level = NGX_LOG_CRIT;
+                break;
+            default:
+                level = NGX_LOG_ERR;
+                break;
+        }
+
+        ngx_log_error ( level, 
+                        ngx_perl_log 
+                            ? ngx_perl_log
+                            : ngx_cycle->log, 
+                        SvOK (ST(0)) 
+                            ? SvIV (ST(0)) 
+                            : 0,
+                        "perl: %s", 
+                        (u_char *) SvPV_nolen (ST(1)) );
+
+
 SV *
 ngx_timer(after, repeat, cb)
     PROTOTYPE: $$&

@@ -7,6 +7,11 @@ require Exporter;
 our @ISA    = qw(Exporter);
 our @EXPORT = qw(
 
+    ngx_log_error
+    ngx_log_notice
+    ngx_log_info
+    ngx_log_crit
+
     ngx_timer
     ngx_connector
     ngx_reader

@@ -113,5 +113,6 @@ void ngx_perl_read(ngx_connection_t *c);
 void ngx_perl_write(ngx_connection_t *c);
 void ngx_perl_noop(ngx_connection_t *c);
 
+extern ngx_log_t  *ngx_perl_log;
 
 #endif /* _NGX_HTTP_PERL_MODULE_H_INCLUDED_ */
