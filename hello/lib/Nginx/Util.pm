@@ -126,8 +126,7 @@ sub http_req ($$\$$&) {
                 if $!;
             
             return NGX_READ 
-                if $$buf_ref !~ / \x0d?\x0a \x0d?\x0a /x && 
-                   length($$buf_ref) < 2000;
+                if $$buf_ref !~ / \x0d?\x0a \x0d?\x0a /x;
 
             my %h;
 
