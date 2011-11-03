@@ -1,4 +1,4 @@
-package nginx;
+package Nginx;
 
 use strict;
 use warnings;
@@ -79,18 +79,18 @@ our @EXPORT = qw(
 our $VERSION = '1.1.6.1';
 
 require XSLoader;
-XSLoader::load('nginx', $VERSION);
+XSLoader::load('Nginx', $VERSION);
 
 1;
 __END__
 
 =head1 NAME
 
-nginx - Perl interface to the nginx HTTP server API
+Nginx - new interface for nginx
 
 =head1 SYNOPSIS
 
-  use nginx;
+  use Nginx;
 
 =head1 DESCRIPTION
 

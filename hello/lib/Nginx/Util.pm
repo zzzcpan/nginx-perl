@@ -62,7 +62,7 @@ our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(http_req);
 our $VERSION   = '1.1.6.1';
 
-use nginx;
+use Nginx;
 
 
 =item http_req $ip, $port, $buf, $timeout, sub { my $r = shift; };

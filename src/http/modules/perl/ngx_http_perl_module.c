@@ -159,7 +159,7 @@ ngx_http_perl_xs_init(pTHX)
 {
     newXS("DynaLoader::boot_DynaLoader", boot_DynaLoader, __FILE__);
 
-    nginx_stash = gv_stashpv("nginx", TRUE);
+    nginx_stash = gv_stashpv("Nginx", TRUE);
 }
 
 
@@ -528,7 +528,7 @@ ngx_http_perl_create_interpreter(ngx_conf_t *cf,
         }
     }
 
-    embedding[n++] = "-Mnginx";
+    embedding[n++] = "-MNginx";
     embedding[n++] = "-e";
     embedding[n++] = "0";
 
@@ -539,12 +539,12 @@ ngx_http_perl_create_interpreter(ngx_conf_t *cf,
         goto fail;
     }
 
-    sv = get_sv("nginx::VERSION", FALSE);
+    sv = get_sv("Nginx::VERSION", FALSE);
     ver = SvPV(sv, len);
 
     if (ngx_strcmp(ver, NGINX_VERSION) != 0) {
         ngx_log_error(NGX_LOG_ALERT, cf->log, 0,
-                      "version " NGINX_VERSION " of nginx.pm is required, "
+                      "version " NGINX_VERSION " of Nginx.pm is required, "
                       "but %s was found", ver);
         goto fail;
     }

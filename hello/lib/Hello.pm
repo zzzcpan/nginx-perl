@@ -4,7 +4,7 @@ use strict;
 use warnings;
 no  warnings 'uninitialized';
 
-use nginx;
+use Nginx;
 
 sub selftest_get ($&);
 sub send_response ($$);

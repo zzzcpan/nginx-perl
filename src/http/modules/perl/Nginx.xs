@@ -1,6 +1,6 @@
 
 /*
- * Copyright (C) Igor Sysoev
+ * Copyright (C) Igor Sysoev, Alexandr Gomoliako
  */
 
 
@@ -95,10 +95,10 @@ ngx_http_perl_output(ngx_http_request_t *r, ngx_buf_t *b)
 
 #define ci(stash, a, b)   newCONSTSUB (stash, a, newSViv(b))
 
-MODULE = nginx    PACKAGE = nginx
+MODULE = Nginx    PACKAGE = Nginx
 
 BOOT:
-    HV *stash = gv_stashpv ("nginx", 1);
+    HV *stash = gv_stashpv ("Nginx", 1);
     ci (stash, "NGX_DONE",                       NGX_DONE);
     ci (stash, "NGX_HTTP_LAST",                  NGX_HTTP_LAST);
     ci (stash, "NGX_OK",                         NGX_OK);
