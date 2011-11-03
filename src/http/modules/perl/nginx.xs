@@ -1073,6 +1073,23 @@ finalize_request(r, rc)
 
 
 SV *
+location_name(r)
+    CODE:
+
+    ngx_http_request_t        *r;
+    ngx_http_core_loc_conf_t  *clcf;
+
+    ngx_http_perl_set_request(r);
+
+    clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+
+    RETVAL = newSVpvn((char *) clcf->name.data, clcf->name.len); 
+
+    OUTPUT:
+    RETVAL
+
+
+SV *
 ngx_timer(after, repeat, cb)
     PROTOTYPE: $$&
     CODE:
