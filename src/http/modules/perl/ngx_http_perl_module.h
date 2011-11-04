@@ -95,6 +95,7 @@ void ngx_perl_timer_clear(ngx_connection_t *c);
 #define NGX_PERL_EBADF       EBADF
 #define NGX_PERL_ETIMEDOUT   ETIMEDOUT
 #define NGX_PERL_ENOMSG      ENOMSG
+#define NGX_PERL_EAGAIN      EAGAIN
 
 typedef struct {
     SV       *connect_cb;

@@ -1206,8 +1206,10 @@ ngx_perl_resolver_handler(ngx_resolver_ctx_t *ctx)
 
         if (ctx->state == NGX_RESOLVE_TIMEDOUT) {
             errno = NGX_PERL_ETIMEDOUT;
-        } else {
+        } else if (ctx->state == NGX_RESOLVE_NXDOMAIN) {
             errno = NGX_PERL_ENOMSG;
+        } else {
+            errno = NGX_PERL_EAGAIN;
         }
 
         XPUSHs(newSViv(ctx->state));
