@@ -1054,6 +1054,26 @@ finalize_request(r, rc)
         }
 
 
+void
+core_run_phases(r)
+    CODE:
+        ngx_http_request_t   *r;
+
+        ngx_http_perl_set_request(r);
+
+        ngx_http_core_run_phases(r);
+
+
+void
+phase_handler_inc(r)
+    CODE:
+        ngx_http_request_t   *r;
+
+        ngx_http_perl_set_request(r);
+
+        r->phase_handler++;
+
+
 SV *
 location_name(r)
     CODE:
