@@ -10,7 +10,7 @@ Nginx::Util - utility functions
     use Data::Dumper;
 
     use Nginx::Util qw(http_req);
-    use nginx;
+    use Nginx;
 
     sub handler {
         my $r = shift;
