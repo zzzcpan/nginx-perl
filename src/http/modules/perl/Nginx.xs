@@ -1202,3 +1202,10 @@ ngx_noop(c)
         ngx_perl_noop(c);
 
 
+void
+ngx_resolver(name, timeout, cb)
+    CODE:
+        ngx_perl_resolver(ST(0), ST(1), ST(2));
+
+
+

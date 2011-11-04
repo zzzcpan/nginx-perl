@@ -84,12 +84,17 @@ void ngx_perl_timer_clear(ngx_connection_t *c);
 #  define  EBADE  52
 #endif
 
+#ifndef ENOMSG
+#  define  ENOMSG  42
+#endif
+
 #define NGX_PERL_EOF         42   /* ENOMSG */
 #define NGX_PERL_EINVAL      EINVAL
 #define NGX_PERL_ENOMEM      ENOMEM
 #define NGX_PERL_EBADE       EBADE
 #define NGX_PERL_EBADF       EBADF
 #define NGX_PERL_ETIMEDOUT   ETIMEDOUT
+#define NGX_PERL_ENOMSG      ENOMSG
 
 typedef struct {
     SV       *connect_cb;
@@ -112,6 +117,15 @@ void ngx_perl_close(ngx_connection_t *c);
 void ngx_perl_read(ngx_connection_t *c);
 void ngx_perl_write(ngx_connection_t *c);
 void ngx_perl_noop(ngx_connection_t *c);
+
+
+typedef struct {
+    ngx_str_t   name;
+    SV         *cb;
+} ngx_perl_resolver_t;
+
+void ngx_perl_resolver(SV *name, SV *timeout, SV *cb);
+
 
 extern ngx_log_t  *ngx_perl_log;
 

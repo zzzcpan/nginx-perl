@@ -61,6 +61,7 @@ static void ngx_perl_connect_handler(ngx_event_t *ev);
 static void ngx_perl_dummy_handler(ngx_event_t *ev);
 static void ngx_perl_read_handler(ngx_event_t *ev);
 static void ngx_perl_write_handler(ngx_event_t *ev);
+static void ngx_perl_resolver_handler(ngx_resolver_ctx_t *ctx);
 
 
 static ngx_command_t  ngx_http_perl_commands[] = {
@@ -1063,6 +1064,198 @@ ngx_perl_timer_callback(ngx_event_t *ev)
 
 
 void
+ngx_perl_resolver(SV *name, SV *timeout, SV *cb)
+{
+    ngx_http_core_loc_conf_t  *clcf;
+    ngx_perl_resolver_t       *pr;
+    ngx_resolver_ctx_t        *ctx, temp;
+    dSP;
+
+    clcf = ngx_http_cycle_get_module_loc_conf(ngx_cycle, 
+                                              ngx_http_core_module);
+
+    errno = 0;
+
+    Newz(0, pr, 1, ngx_perl_resolver_t);
+
+    if (pr == NULL) {
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
+    }
+
+
+    Newz(0, pr->name.data, SvCUR(name), u_char);
+
+    if (pr->name.data == NULL) {
+        ngx_log_error(NGX_LOG_ERR, ngx_perl_log, 0,
+                      "ngx_perl_resolver: "
+                      "Newz failed");
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
+    }
+
+    ngx_memcpy(pr->name.data, SvPV_nolen(name), SvCUR(name));
+    pr->name.len = SvCUR(name);
+
+    temp.name = pr->name;
+
+
+    pr->cb = cb;
+    SvREFCNT_inc(cb);
+
+
+    ctx = ngx_resolve_start(clcf->resolver, &temp);
+
+    if (ctx == NULL) {
+        errno = NGX_PERL_EBADE;
+        goto FATAL;
+    }
+
+    if (ctx == NGX_NO_RESOLVER) {
+        ngx_log_error(NGX_LOG_ERR, ngx_perl_log, 0,
+                      "ngx_perl_resolver: "
+                      "no resolver defined to resolve %V", 
+                      &temp.name);
+        errno = NGX_PERL_EBADE;
+        goto FATAL;
+    }
+
+    ctx->name    = pr->name;
+    ctx->type    = NGX_RESOLVE_A;
+    ctx->handler = ngx_perl_resolver_handler;
+    ctx->data    = pr;
+    ctx->timeout = clcf->resolver_timeout;
+
+    if (SvOK(timeout)) {
+        ctx->timeout = SvIV(timeout) * 1000;
+    } else if (clcf->resolver_timeout == NGX_CONF_UNSET_MSEC) {
+        ctx->timeout = 30000; 
+    }
+
+    if (ngx_resolve_name(ctx) != NGX_OK) {
+        errno = NGX_PERL_EBADE;
+        goto FATAL;
+    }
+
+    return;
+
+FATAL:
+
+    SvREFCNT_inc(cb);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+    PUTBACK;
+
+    call_sv(cb, G_VOID|G_DISCARD); 
+
+    FREETMPS;
+    LEAVE;
+
+    SvREFCNT_dec(cb);
+    errno = 0;
+
+    if (pr) {
+        if (pr->name.data) {
+            safefree(pr->name.data);
+            pr->name.data = NULL;
+        }
+
+        if (pr->cb) {
+            SvREFCNT_dec(pr->cb);
+            pr->cb = NULL;
+        }
+
+        safefree(pr);
+    }
+
+    return;
+}
+
+
+static void
+ngx_perl_resolver_handler(ngx_resolver_ctx_t *ctx)
+{
+    ngx_perl_resolver_t  *pr;
+    in_addr_t             addr;
+    ngx_uint_t            i;
+    SV                   *cb;
+    dSP;
+
+    pr = (ngx_perl_resolver_t *) ctx->data;
+
+    errno = 0;
+
+    cb = pr->cb;
+
+    SvREFCNT_inc(cb);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+
+    if (ctx->state) {
+        ngx_log_error(NGX_LOG_ERR, ngx_perl_log, 0,
+                      "ngx_perl_resolver: "
+                      "\"%V\" could not be resolved (%i: %s)",
+                      &ctx->name, ctx->state,
+                      ngx_resolver_strerror(ctx->state));
+
+        if (ctx->state == NGX_RESOLVE_TIMEDOUT) {
+            errno = NGX_PERL_ETIMEDOUT;
+        } else {
+            errno = NGX_PERL_ENOMSG;
+        }
+
+        XPUSHs(newSViv(ctx->state));
+        XPUSHs(newSVpvf("%s", ngx_resolver_strerror(ctx->state)));
+    } else {
+        EXTEND(SP, ctx->naddrs);
+
+        for (i = 0; i < ctx->naddrs; i++) {
+            addr = ctx->addrs[i];
+            PUSHs(newSVpvf("%u.%u.%u.%u",
+                           (ntohl(addr) >> 24) & 0xff,
+                           (ntohl(addr) >> 16) & 0xff,
+                           (ntohl(addr) >> 8) & 0xff,
+                           ntohl(addr) & 0xff));
+        }
+    }
+
+    ngx_resolve_name_done(ctx);
+
+    PUTBACK;
+
+    call_sv(cb, G_VOID|G_DISCARD); 
+
+    FREETMPS;
+    LEAVE;
+
+    SvREFCNT_dec(cb);
+    errno = 0;
+
+    if (pr) {
+        if (pr->name.data) {
+            safefree(pr->name.data);
+            pr->name.data = NULL;
+        }
+
+        if (pr->cb) {
+            SvREFCNT_dec(pr->cb);
+            pr->cb = NULL;
+        }
+
+        safefree(pr);
+    }
+
+    return;
+}
+
+
+void
 ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb) 
 {
     in_addr_t               inaddr;
@@ -1075,6 +1268,8 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
     ngx_connection_t       *c;
     ngx_int_t               rc;
     dSP;
+
+    errno = 0;
 
     if (!SvOK(address) || !SvOK(port) || !SvOK(timeout)) {
         ngx_log_error(NGX_LOG_ERR, ngx_perl_log, 0,
@@ -1179,7 +1374,7 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
         goto FATAL;
     }
 
-    ngx_memcpy(peer->name->data, SvPVX(address), SvCUR(address));
+    ngx_memcpy(peer->name->data, SvPV_nolen(address), SvCUR(address));
     peer->name->len = SvCUR(address);
 
 
@@ -1544,6 +1739,8 @@ ngx_perl_connect_handler(ngx_event_t *ev)
     c   = (ngx_connection_t *)      ev->data;
     plc = (ngx_perl_connection_t *) c->data;
 
+    errno = 0;
+
     c->read->handler  = ngx_perl_dummy_handler;
     c->write->handler = ngx_perl_dummy_handler;
 
@@ -1641,6 +1838,8 @@ ngx_perl_read_handler(ngx_event_t *ev)
 
     c   = (ngx_connection_t *) ev->data;
     plc = (ngx_perl_connection_t *) c->data;
+
+    errno = 0;
 
     if (ev->timer_set) {
         ngx_del_timer(ev);
@@ -1811,6 +2010,8 @@ ngx_perl_write_handler(ngx_event_t *ev)
 
     c   = (ngx_connection_t *) ev->data;
     plc = (ngx_perl_connection_t *) c->data;
+
+    errno = 0;
 
     if (ev->timer_set) {
         ngx_del_timer(ev);

@@ -70,5 +70,12 @@ typedef struct {
             ->main_conf[module.ctx_index]:                                    \
         NULL)
 
+#define ngx_http_cycle_get_module_loc_conf(cycle, module)                     \
+    (cycle->conf_ctx[ngx_http_module.index] ?                                 \
+        ((ngx_http_conf_ctx_t *) cycle->conf_ctx[ngx_http_module.index])      \
+            ->loc_conf[module.ctx_index]:                                     \
+        NULL)
+
+
 
 #endif /* _NGX_HTTP_CONFIG_H_INCLUDED_ */
