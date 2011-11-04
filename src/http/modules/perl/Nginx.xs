@@ -112,7 +112,15 @@ BOOT:
     ci (stash, "NGX_ENOMEM",                     NGX_PERL_ENOMEM);
     ci (stash, "NGX_EBADF",                      NGX_PERL_EBADF);
     ci (stash, "NGX_EBADE",                      NGX_PERL_EBADE);
+    ci (stash, "NGX_EAGAIN",                     NGX_PERL_EAGAIN);
+    ci (stash, "NGX_ENOMSG",                     NGX_PERL_ENOMSG);
     ci (stash, "NGX_ETIMEDOUT",                  NGX_PERL_ETIMEDOUT);
+    ci (stash, "NGX_RESOLVE_FORMERR",            NGX_RESOLVE_FORMERR);
+    ci (stash, "NGX_RESOLVE_SERVFAIL",           NGX_RESOLVE_SERVFAIL);
+    ci (stash, "NGX_RESOLVE_NXDOMAIN",           NGX_RESOLVE_NXDOMAIN);
+    ci (stash, "NGX_RESOLVE_NOTIMP",             NGX_RESOLVE_NOTIMP);
+    ci (stash, "NGX_RESOLVE_REFUSED",            NGX_RESOLVE_REFUSED);
+    ci (stash, "NGX_RESOLVE_TIMEDOUT",           NGX_RESOLVE_TIMEDOUT);
     ci (stash, "OK",                             0);
     ci (stash, "DECLINED",                       -5);
     ci (stash, "HTTP_OK",                        200);
