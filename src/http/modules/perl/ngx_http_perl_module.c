@@ -19,6 +19,8 @@ typedef struct {
 typedef struct {
     SV                *sub;
     ngx_str_t          handler;
+    SV                *access_sub;
+    ngx_str_t          access_handler;
 } ngx_http_perl_loc_conf_t;
 
 
@@ -44,12 +46,15 @@ static ngx_int_t ngx_http_perl_call_handler(pTHX_ ngx_http_request_t *r,
 static void ngx_http_perl_eval_anon_sub(pTHX_ ngx_str_t *handler, SV **sv);
 
 static ngx_int_t ngx_http_perl_preconfiguration(ngx_conf_t *cf);
+static ngx_int_t ngx_http_perl_postconfiguration(ngx_conf_t *cf);
 static void *ngx_http_perl_create_main_conf(ngx_conf_t *cf);
 static char *ngx_http_perl_init_main_conf(ngx_conf_t *cf, void *conf);
 static void *ngx_http_perl_create_loc_conf(ngx_conf_t *cf);
 static char *ngx_http_perl_merge_loc_conf(ngx_conf_t *cf, void *parent,
     void *child);
 static char *ngx_http_perl(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_http_perl_access(ngx_conf_t *cf, ngx_command_t *cmd, 
+    void *conf);
 static char *ngx_http_perl_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 static ngx_int_t ngx_http_perl_init_worker(ngx_cycle_t *cycle);
@@ -87,6 +92,13 @@ static ngx_command_t  ngx_http_perl_commands[] = {
       0,
       NULL },
 
+    { ngx_string("perl_access"),
+      NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF|NGX_CONF_TAKE1,
+      ngx_http_perl_access,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
     { ngx_string("perl_set"),
       NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE2,
       ngx_http_perl_set,
@@ -100,7 +112,7 @@ static ngx_command_t  ngx_http_perl_commands[] = {
 
 static ngx_http_module_t  ngx_http_perl_module_ctx = {
     ngx_http_perl_preconfiguration,        /* preconfiguration */
-    NULL,                                  /* postconfiguration */
+    ngx_http_perl_postconfiguration,       /* postconfiguration */
 
     ngx_http_perl_create_main_conf,        /* create main configuration */
     ngx_http_perl_init_main_conf,          /* init main configuration */
@@ -172,6 +184,39 @@ ngx_http_perl_handler(ngx_http_request_t *r)
     ngx_http_perl_handle_request(r);
 
     return NGX_DONE;
+}
+
+
+static ngx_int_t
+ngx_http_perl_access_handler(ngx_http_request_t *r)
+{
+    ngx_http_perl_loc_conf_t  *plcf;
+    ngx_int_t                  rc;
+    dSP;
+
+    plcf = ngx_http_get_module_loc_conf(r, ngx_http_perl_module);
+
+    if (!plcf->access_sub) {
+        return NGX_OK;
+    }
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(sp);
+    XPUSHs(sv_2mortal(sv_bless(newRV_noinc(newSViv(PTR2IV(r))), nginx_stash)));
+    PUTBACK;
+
+    call_sv(plcf->access_sub, G_SCALAR);
+
+    SPAGAIN;
+    rc = POPi;
+    PUTBACK;
+
+    FREETMPS;
+    LEAVE;
+
+    return rc;
 }
 
 
@@ -784,6 +829,25 @@ ngx_http_perl_preconfiguration(ngx_conf_t *cf)
 }
 
 
+static ngx_int_t
+ngx_http_perl_postconfiguration(ngx_conf_t *cf)
+{
+    ngx_http_handler_pt        *h;
+    ngx_http_core_main_conf_t  *cmcf;
+
+    cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
+
+    h = ngx_array_push(&cmcf->phases[NGX_HTTP_ACCESS_PHASE].handlers);
+    if (h == NULL) {
+        return NGX_ERROR;
+    }
+
+    *h = ngx_http_perl_access_handler;
+
+    return NGX_OK;
+}
+
+
 static void *
 ngx_http_perl_create_loc_conf(ngx_conf_t *cf)
 {
@@ -813,6 +877,11 @@ ngx_http_perl_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     if (conf->sub == NULL) {
         conf->sub = prev->sub;
         conf->handler = prev->handler;
+    }
+
+    if (conf->access_sub == NULL) {
+        conf->access_sub = prev->access_sub;
+        conf->access_handler = prev->access_handler;
     }
 
     return NGX_CONF_OK;
@@ -860,6 +929,48 @@ ngx_http_perl(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
     clcf->handler = ngx_http_perl_handler;
+
+    return NGX_CONF_OK;
+}
+
+
+static char *
+ngx_http_perl_access(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_http_perl_loc_conf_t *plcf = conf;
+
+    ngx_str_t                  *value;
+    ngx_http_perl_main_conf_t  *pmcf;
+
+    value = cf->args->elts;
+
+    if (plcf->access_handler.data) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "duplicate perl_access handler \"%V\"", &value[1]);
+        return NGX_CONF_ERROR;
+    }
+
+    pmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_perl_module);
+
+    if (my_perl == NULL) {
+        if (ngx_http_perl_init_interpreter(cf, pmcf) != NGX_CONF_OK) {
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    plcf->access_handler = value[1];
+
+    ngx_http_perl_eval_anon_sub(aTHX_ &value[1], &plcf->access_sub);
+
+    if (plcf->access_sub == &PL_sv_undef) {
+        ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
+                           "eval_pv(\"%V\") failed", &value[1]);
+        return NGX_CONF_ERROR;
+    }
+
+    if (plcf->access_sub == NULL) {
+        plcf->access_sub = newSVpvn((char *) value[1].data, value[1].len);
+    }
 
     return NGX_CONF_OK;
 }
@@ -1775,7 +1886,7 @@ CALLBACK:
     XPUSHs(sv_2mortal(newSViv(PTR2IV(c)))); 
     PUTBACK;
 
-    count = call_sv(cb, G_VOID|G_SCALAR); 
+    count = call_sv(cb, G_SCALAR); 
 
     if (count != 1) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
@@ -1948,7 +2059,7 @@ CALLBACK:
         "ev->eof = %i, ev->error = %i, c->error = %i",
         ev->eof, ev->error, c->error);
 
-    count = call_sv(cb, G_VOID|G_SCALAR); 
+    count = call_sv(cb, G_SCALAR); 
 
     if (count != 1) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
@@ -2086,7 +2197,7 @@ CALLBACK:
     XPUSHs(sv_2mortal(newSViv(PTR2IV(c)))); 
     PUTBACK;
 
-    count = call_sv(cb, G_VOID|G_SCALAR); 
+    count = call_sv(cb, G_SCALAR); 
 
     if (count != 1) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
