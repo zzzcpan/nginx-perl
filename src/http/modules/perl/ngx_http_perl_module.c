@@ -1135,19 +1135,24 @@ ngx_perl_timer(ngx_int_t after, SV *repeat, SV *cb)
     ngx_connection_t  *c;
     ngx_perl_timer_t  *t;
 
-    c = ngx_get_connection((ngx_socket_t) 0, ngx_cycle->log);
+    c = ngx_get_connection((ngx_socket_t) 0, ngx_perl_log);
     if (c == NULL) {
         return NULL;
     }
  
+    c->number = ngx_atomic_fetch_add(ngx_connection_counter, 1);
+    c->data   = NULL;
+
     Newz(0, t, 1, ngx_perl_timer_t);
+
     if (t == NULL) {
+        ngx_perl_timer_clear(c);
         return NULL;
     }
 
     c->read->handler = ngx_perl_timer_callback;
     c->read->active  = 1;
-    c->read->log     = ngx_cycle->log;
+    c->read->log     = c->log;
 
     c->data = (void *) t;
 
@@ -1175,16 +1180,31 @@ ngx_perl_timer_clear(ngx_connection_t *c)
         return;
     }
 
-    t = (ngx_perl_timer_t *) c->data;
+    if (c->data) {
+        t = (ngx_perl_timer_t *) c->data;
 
-    SvREFCNT_dec(t->repeat);
-    SvREFCNT_dec(t->cb);
+        if (t->repeat) {
+            SvREFCNT_dec(t->repeat);
+            t->repeat = NULL;
+        }
+
+        if (t->cb) {
+            SvREFCNT_dec(t->cb);
+            t->cb = NULL;
+        }
+
+        safefree(t);
+    }
 
     if (c->read->timer_set) {
         ngx_del_timer(c->read);
     }
 
-    safefree(t);
+    if (c->read->timer_set) {
+        ngx_del_timer(c->read);
+    }
+
+    c->destroyed = 1;
     ngx_free_connection(c);
 
     return;
@@ -1196,10 +1216,19 @@ ngx_perl_timer_callback(ngx_event_t *ev)
 {
     ngx_connection_t  *c;
     ngx_perl_timer_t  *t;
+    SV                *cb;
     dSP;
+
+    if (ev->timer_set) {
+        ngx_del_timer(ev);
+    }
 
     c = (ngx_connection_t *) ev->data;
     t = (ngx_perl_timer_t *) c->data;
+
+    cb = t->cb;
+
+    SvREFCNT_inc(cb);
 
     ENTER;
     SAVETMPS;
@@ -1208,12 +1237,14 @@ ngx_perl_timer_callback(ngx_event_t *ev)
     XPUSHs(sv_2mortal(newSViv(PTR2IV(c))));
     PUTBACK;
 
-    call_sv(t->cb, G_VOID|G_DISCARD);
+    call_sv(cb, G_VOID|G_DISCARD);
 
     FREETMPS;
     LEAVE;
 
-    if (SvIV(t->repeat) > 0) {
+    SvREFCNT_dec(cb);
+
+    if (!c->destroyed && SvOK(t->repeat) && SvIV(t->repeat) > 0) {
         ngx_add_timer(ev, SvIV(t->repeat) * 1000);
     } else {
         ngx_perl_timer_clear(c);
