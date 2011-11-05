@@ -74,11 +74,12 @@ ngx_connection_t *ngx_perl_timer(ngx_int_t after, SV *repeat, SV *cb);
 void ngx_perl_timer_clear(ngx_connection_t *c);
 
 
-#define NGX_PERL_NOOP        0
-#define NGX_PERL_READ        1
-#define NGX_PERL_WRITE       2
-#define NGX_PERL_CONNECT     4
-#define NGX_PERL_CLOSE       8
+#define NGX_PERL_NOOP             0
+#define NGX_PERL_READ             1
+#define NGX_PERL_WRITE            2
+#define NGX_PERL_CONNECT          4
+#define NGX_PERL_CLOSE            8
+#define NGX_PERL_SSL_HANDSHAKE   16
 
 #ifndef EBADE
 #  define  EBADE  52
@@ -96,21 +97,27 @@ void ngx_perl_timer_clear(ngx_connection_t *c);
 #define NGX_PERL_ETIMEDOUT   ETIMEDOUT
 #define NGX_PERL_ENOMSG      ENOMSG
 #define NGX_PERL_EAGAIN      EAGAIN
+#define NGX_PERL_ENOTSUP     ENOTSUP
 
 typedef struct {
-    SV       *connect_cb;
-    SV       *read_buffer;
-    SV       *read_min;
-    SV       *read_max;
-    SV       *read_timeout;
-    SV       *read_cb;
-    SV       *write_buffer;
-    ssize_t   write_offset;
-    SV       *write_timeout;
-    SV       *write_cb;
+    SV          *connect_cb;
+    SV          *read_buffer;
+    SV          *read_min;
+    SV          *read_max;
+    SV          *read_timeout;
+    SV          *read_cb;
+    SV          *write_buffer;
+    ssize_t      write_offset;
+    SV          *write_timeout;
+    SV          *write_cb;
+#if (NGX_HTTP_SSL)
+    ngx_flag_t   ssl;
+    SV          *ssl_handshake_cb;
+#endif
 } ngx_perl_connection_t;
 
 void ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb);
+void ngx_perl_ssl_handshaker(ngx_connection_t *c, SV *cb);
 void ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *timeout, SV *cb);
 void ngx_perl_reader(ngx_connection_t *c, SV *buf, SV *min, SV *max, 
         SV *timeout, SV *cb);
@@ -118,6 +125,10 @@ void ngx_perl_close(ngx_connection_t *c);
 void ngx_perl_read(ngx_connection_t *c);
 void ngx_perl_write(ngx_connection_t *c);
 void ngx_perl_noop(ngx_connection_t *c);
+
+#if (NGX_HTTP_SSL)
+void ngx_perl_ssl_handshake(ngx_connection_t *c);
+#endif
 
 
 typedef struct {

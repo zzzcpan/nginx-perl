@@ -21,6 +21,9 @@ typedef struct {
     ngx_str_t          handler;
     SV                *access_sub;
     ngx_str_t          access_handler;
+#if (NGX_HTTP_SSL)
+    ngx_ssl_t         *ssl;
+#endif
 } ngx_http_perl_loc_conf_t;
 
 
@@ -68,6 +71,11 @@ static void ngx_perl_read_handler(ngx_event_t *ev);
 static void ngx_perl_write_handler(ngx_event_t *ev);
 static void ngx_perl_resolver_handler(ngx_resolver_ctx_t *ctx);
 
+#if (NGX_HTTP_SSL)
+static ngx_int_t ngx_http_perl_set_ssl(ngx_conf_t *cf, 
+    ngx_http_perl_loc_conf_t *plcf);
+static void ngx_perl_ssl_handshake_handler(ngx_connection_t *c);
+#endif
 
 static ngx_command_t  ngx_http_perl_commands[] = {
 
@@ -848,6 +856,41 @@ ngx_http_perl_postconfiguration(ngx_conf_t *cf)
 }
 
 
+#if (NGX_HTTP_SSL)
+
+static ngx_int_t
+ngx_http_perl_set_ssl(ngx_conf_t *cf, ngx_http_perl_loc_conf_t *plcf)
+{
+    ngx_pool_cleanup_t  *cln;
+
+    plcf->ssl = ngx_pcalloc(cf->pool, sizeof(ngx_ssl_t));
+    if (plcf->ssl == NULL) {
+        return NGX_ERROR;
+    }
+
+    plcf->ssl->log = cf->log;
+
+    if (ngx_ssl_create(plcf->ssl,
+                       NGX_SSL_SSLv2|NGX_SSL_SSLv3|NGX_SSL_TLSv1, NULL)
+        != NGX_OK)
+    {
+        return NGX_ERROR;
+    }
+
+    cln = ngx_pool_cleanup_add(cf->pool, 0);
+    if (cln == NULL) {
+        return NGX_ERROR;
+    }
+
+    cln->handler = ngx_ssl_cleanup_ctx;
+    cln->data = plcf->ssl;
+
+    return NGX_OK;
+}
+
+#endif
+
+
 static void *
 ngx_http_perl_create_loc_conf(ngx_conf_t *cf)
 {
@@ -863,6 +906,12 @@ ngx_http_perl_create_loc_conf(ngx_conf_t *cf)
      *
      *     plcf->handler = { 0, NULL };
      */
+
+#if (NGX_HTTP_SSL)
+    if (ngx_http_perl_set_ssl(cf, plcf) != NGX_OK) {
+        return NULL;
+    }
+#endif
 
     return plcf;
 }
@@ -1642,6 +1691,73 @@ ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *timeout, SV *cb)
     return;
 }
 
+
+void
+ngx_perl_ssl_handshaker(ngx_connection_t *c, SV *cb) 
+{
+#if (NGX_HTTP_SSL)
+    ngx_perl_connection_t     *plc;
+    ngx_http_perl_loc_conf_t  *plcf;
+
+    plc = (ngx_perl_connection_t *) c->data;
+
+    if (plc->ssl_handshake_cb) {
+        SvREFCNT_dec(plc->ssl_handshake_cb);
+        plc->ssl_handshake_cb = NULL;
+    }
+
+    plc->ssl              = 1;
+    plc->ssl_handshake_cb = cb;
+
+    SvREFCNT_inc(cb);
+
+
+    plcf = ngx_http_cycle_get_module_loc_conf(ngx_cycle, ngx_http_perl_module);
+
+    if ( ngx_ssl_create_connection
+            ( plcf->ssl, 
+              c,
+              NGX_SSL_BUFFER|NGX_SSL_CLIENT ) != NGX_OK ) 
+    {
+        c->error = 1;
+        ngx_perl_ssl_handshake_handler(c);
+        return;
+    }
+
+    c->sendfile = 0;
+    c->log->action = "SSL handshaking with peer";
+
+    return;
+#else 
+    dSP;
+
+    ngx_log_error(NGX_LOG_ERR, c->log, 0,
+        "ngx_perl_ssl_handshake: "
+        "SSL support is required to use ngx_ssl_handshaker()");
+
+    errno = NGX_PERL_ENOTSUP; 
+
+    SvREFCNT_inc(cb);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+    PUTBACK;
+
+    call_sv(cb, G_VOID|G_DISCARD); 
+
+    FREETMPS;
+    LEAVE;
+
+    SvREFCNT_dec(cb);
+    errno = 0;
+
+    return;
+#endif
+}
+
+
 static void
 ngx_perl_connection_cleanup(void *data)
 {
@@ -1697,6 +1813,14 @@ ngx_perl_connection_cleanup(void *data)
         plc->write_cb = NULL;
     }
 
+#if (NGX_HTTP_SSL)
+
+    if (plc->ssl_handshake_cb) {
+        SvREFCNT_dec(plc->ssl_handshake_cb);
+        plc->ssl_handshake_cb = NULL;
+    }
+
+#endif
 
     return;
 }
@@ -1713,6 +1837,27 @@ ngx_perl_close(ngx_connection_t *c)
             "connection already destroyed");
         return;
     }
+
+#if (NGX_HTTP_SSL)
+
+    /* XXX taken from ngx_http_upstream.c */
+
+    /* TODO: do not shutdown persistent connection */
+
+    if (c->ssl) {
+
+        /*
+         * We send the "close notify" shutdown alert to the upstream only
+         * and do not wait its "close notify" shutdown alert.
+         * It is acceptable according to the TLS standard.
+         */
+
+        c->ssl->no_wait_shutdown = 1;
+
+        (void) ngx_ssl_shutdown(c);
+    }
+
+#endif
 
     pool = c->pool; 
 
@@ -1781,7 +1926,7 @@ ngx_perl_write(ngx_connection_t *c)
         ngx_del_timer(c->write);
     }
 
-    c->read->handler  = ngx_perl_read_handler;
+    c->read->handler  = ngx_perl_dummy_handler;
     c->write->handler = ngx_perl_write_handler;
 
     if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
@@ -1813,6 +1958,28 @@ ngx_perl_write(ngx_connection_t *c)
 
     return;
 }
+
+
+#if (NGX_HTTP_SSL)
+
+void
+ngx_perl_ssl_handshake(ngx_connection_t *c) 
+{
+    ngx_int_t  rc;
+
+    rc = ngx_ssl_handshake(c);
+
+    if (rc == NGX_AGAIN) {
+        c->ssl->handler = ngx_perl_ssl_handshake_handler;
+        return;
+    }
+
+    ngx_perl_ssl_handshake_handler(c);
+
+    return;
+}
+
+#endif
 
 
 void
@@ -1928,6 +2095,13 @@ CALLBACK:
             if (c->write->ready) {
                 c->write->handler(c->write);
             }
+            break;
+        case NGX_PERL_SSL_HANDSHAKE:
+#if (NGX_HTTP_SSL)
+            ngx_perl_ssl_handshake(c);
+#else
+            ngx_perl_close(c);
+#endif
             break;
         case NGX_PERL_NOOP:
             ngx_perl_noop(c);
@@ -2102,6 +2276,13 @@ CALLBACK:
                 c->write->handler(c->write);
             }
             break;
+        case NGX_PERL_SSL_HANDSHAKE:
+#if (NGX_HTTP_SSL)
+            ngx_perl_ssl_handshake(c);
+#else
+            ngx_perl_close(c);
+#endif
+            break;
         case NGX_PERL_NOOP:
             ngx_perl_noop(c);
             break;
@@ -2237,6 +2418,13 @@ CALLBACK:
                 goto AGAIN;
             }
             break;
+        case NGX_PERL_SSL_HANDSHAKE:
+#if (NGX_HTTP_SSL)
+            ngx_perl_ssl_handshake(c);
+#else
+            ngx_perl_close(c);
+#endif
+            break;
         case NGX_PERL_NOOP:
             ngx_perl_noop(c);
             break;
@@ -2244,5 +2432,100 @@ CALLBACK:
 
     return;
 }
+
+
+#if (NGX_HTTP_SSL)
+
+static void
+ngx_perl_ssl_handshake_handler(ngx_connection_t *c)
+{
+    ngx_perl_connection_t  *plc;
+    SV                     *cb;
+    ngx_int_t               cmd, count;
+    dSP;
+
+    plc = (ngx_perl_connection_t *) c->data;
+
+    if (c->error) {
+        errno = NGX_PERL_EBADE;
+        goto CALLBACK;
+    }
+
+    if (c->ssl->handshaked) {
+        errno = 0;
+        goto CALLBACK;
+    }
+
+    c->error = 1;
+    errno = NGX_PERL_EBADE;
+
+CALLBACK:
+
+    cb = plc->ssl_handshake_cb;
+
+    SvREFCNT_inc(cb);
+
+    ENTER;
+    SAVETMPS;
+
+    PUSHMARK(SP);
+    XPUSHs(sv_2mortal(newSViv(PTR2IV(c)))); 
+    PUTBACK;
+
+    count = call_sv(cb, G_SCALAR); 
+
+    if (count != 1) {
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_ssl_handshake_handler: "
+            "call_sv returned wrong count = %i",
+            count);
+    }
+
+    SPAGAIN;
+    cmd = POPi;
+    PUTBACK;
+
+    FREETMPS;
+    LEAVE;
+
+    SvREFCNT_dec(cb);
+    errno = 0;
+
+    if ((c->error) && cmd != NGX_PERL_CLOSE) {
+        ngx_log_error(NGX_LOG_ERR, c->log, 0,
+            "ngx_perl_ssl_handshake_handler: "
+            "NGX_CLOSE required on error, forcing");
+        ngx_perl_close(c);
+        return;
+    }
+
+    switch (cmd) {
+        case NGX_PERL_CLOSE:
+            ngx_perl_close(c);
+            break;
+        case NGX_PERL_READ:
+            ngx_perl_read(c);
+            if (c->read->ready) {
+                c->read->handler(c->read);
+            }
+            break;
+        case NGX_PERL_WRITE:
+            ngx_perl_write(c);
+            if (c->write->ready) {
+                c->write->handler(c->write);
+            }
+            break;
+        case NGX_PERL_SSL_HANDSHAKE:
+            ngx_perl_ssl_handshake(c);
+            break;
+        case NGX_PERL_NOOP:
+            ngx_perl_noop(c);
+            break;
+    }
+
+    return;
+}
+
+#endif
 
 

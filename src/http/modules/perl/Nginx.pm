@@ -16,16 +16,19 @@ our @EXPORT = qw(
     ngx_timer
     ngx_resolver
     ngx_connector
+    ngx_ssl_handshaker
     ngx_reader
     ngx_writer
     ngx_read
     ngx_write
     ngx_close
+    ngx_ssl_handshake
     ngx_noop
 
     NGX_READ
     NGX_WRITE
     NGX_CLOSE
+    NGX_SSL_HANDSHAKE
     NGX_NOOP
     NGX_EOF
     NGX_EINVAL

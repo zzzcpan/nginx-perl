@@ -107,6 +107,7 @@ BOOT:
     ci (stash, "NGX_READ",                       NGX_PERL_READ);
     ci (stash, "NGX_WRITE",                      NGX_PERL_WRITE);
     ci (stash, "NGX_CLOSE",                      NGX_PERL_CLOSE);
+    ci (stash, "NGX_SSL_HANDSHAKE",              NGX_PERL_SSL_HANDSHAKE);
     ci (stash, "NGX_EOF",                        NGX_PERL_EOF);
     ci (stash, "NGX_EINVAL",                     NGX_PERL_EINVAL);
     ci (stash, "NGX_ENOMEM",                     NGX_PERL_ENOMEM);
@@ -115,6 +116,7 @@ BOOT:
     ci (stash, "NGX_EAGAIN",                     NGX_PERL_EAGAIN);
     ci (stash, "NGX_ENOMSG",                     NGX_PERL_ENOMSG);
     ci (stash, "NGX_ETIMEDOUT",                  NGX_PERL_ETIMEDOUT);
+    ci (stash, "NGX_ENOTSUP",                    NGX_PERL_ENOTSUP);
     ci (stash, "NGX_RESOLVE_FORMERR",            NGX_RESOLVE_FORMERR);
     ci (stash, "NGX_RESOLVE_SERVFAIL",           NGX_RESOLVE_SERVFAIL);
     ci (stash, "NGX_RESOLVE_NXDOMAIN",           NGX_RESOLVE_NXDOMAIN);
@@ -1235,5 +1237,26 @@ ngx_resolver(name, timeout, cb)
     CODE:
         ngx_perl_resolver(ST(0), ST(1), ST(2));
 
+
+void
+ngx_ssl_handshaker(c, cb)
+    PROTOTYPE: $&
+    CODE:
+        ngx_connection_t  *c;
+
+        c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
+
+        ngx_perl_ssl_handshaker(c, ST(1));
+
+
+void
+ngx_ssl_handshake(c)
+    PROTOTYPE: $
+    CODE:
+        ngx_connection_t  *c;
+
+        c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
+
+        ngx_perl_ssl_handshake(c);
 
 

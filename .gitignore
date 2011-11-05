@@ -8,3 +8,4 @@ example/logs/
 .hg*
 example/
 trace.sh
+build.sh
