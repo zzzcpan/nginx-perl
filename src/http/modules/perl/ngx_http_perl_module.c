@@ -13,6 +13,7 @@
 typedef struct {
     ngx_array_t       *modules;
     ngx_array_t       *requires;
+    ngx_array_t       *init_worker;
 } ngx_http_perl_main_conf_t;
 
 
@@ -92,6 +93,13 @@ static ngx_command_t  ngx_http_perl_commands[] = {
       ngx_conf_set_str_array_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(ngx_http_perl_main_conf_t, requires),
+      NULL },
+
+    { ngx_string("perl_init_worker"),
+      NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_array_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(ngx_http_perl_main_conf_t, init_worker),
       NULL },
 
     { ngx_string("perl"),
@@ -795,8 +803,9 @@ ngx_http_perl_create_main_conf(ngx_conf_t *cf)
         return NULL;
     }
 
-    pmcf->modules = NGX_CONF_UNSET_PTR;
-    pmcf->requires = NGX_CONF_UNSET_PTR;
+    pmcf->modules     = NGX_CONF_UNSET_PTR;
+    pmcf->requires    = NGX_CONF_UNSET_PTR;
+    pmcf->init_worker = NGX_CONF_UNSET_PTR;
 
     return pmcf;
 }
@@ -1138,6 +1147,39 @@ ngx_http_perl_init_worker(ngx_cycle_t *cycle)
     }
 
     ngx_perl_log = ngx_cycle->log;
+
+
+    if (pmcf) {
+        ngx_str_t   *script;
+        ngx_uint_t   i;
+        SV          *cb;
+        dSP;
+
+        if (pmcf->init_worker == NGX_CONF_UNSET_PTR) {
+            return NGX_OK;
+        }
+
+        script = pmcf->init_worker->elts;
+
+        for (i = 0; i < pmcf->init_worker->nelts; i++) {
+
+            cb = sv_2mortal ( 
+                    newSVpvn ((char *) script[i].data, script[i].len)
+                 );
+
+            ENTER;
+            SAVETMPS;
+            
+            PUSHMARK(SP);
+            PUTBACK;
+
+            call_sv(cb, G_VOID|G_DISCARD);
+
+            FREETMPS;
+            LEAVE;
+        }
+    }
+
 
     return NGX_OK;
 }
