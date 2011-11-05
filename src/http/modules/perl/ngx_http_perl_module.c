@@ -2072,10 +2072,10 @@ CALLBACK:
     SvREFCNT_dec(cb);
     errno = 0;
 
-    if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
+    if ((ev->error || c->error || ev->timedout) && cmd != NGX_PERL_CLOSE) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
             "ngx_perl_connect_handler: "
-            "NGX_CLOSE required on error, forcing");
+            "NGX_CLOSE required on error and timeout here, forcing");
         ngx_perl_close(c);
         return;
     }
@@ -2255,7 +2255,7 @@ CALLBACK:
     if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
             "ngx_perl_read_handler: "
-            "NGX_CLOSE required on error, forcing");
+            "NGX_CLOSE required on error here, forcing");
         ngx_perl_close(c);
         return;
     }
@@ -2400,7 +2400,7 @@ CALLBACK:
     if ((ev->error || c->error) && cmd != NGX_PERL_CLOSE) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
             "ngx_perl_write_handler: "
-            "NGX_CLOSE required on error, forcing");
+            "NGX_CLOSE required on error here, forcing");
         ngx_perl_close(c);
         return;
     }
@@ -2494,7 +2494,7 @@ CALLBACK:
     if ((c->error) && cmd != NGX_PERL_CLOSE) {
         ngx_log_error(NGX_LOG_ERR, c->log, 0,
             "ngx_perl_ssl_handshake_handler: "
-            "NGX_CLOSE required on error, forcing");
+            "NGX_CLOSE required on error here, forcing");
         ngx_perl_close(c);
         return;
     }
