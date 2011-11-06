@@ -187,8 +187,8 @@ ngx_link=${CORE_LINK:+`echo $CORE_LINK \
 
 cat << END                                                    >> $NGX_MAKEFILE
 
-$NGX_OBJS${ngx_dirsep}nginx${ngx_binext}:	$ngx_deps$ngx_spacer
-	\$(LINK) ${ngx_long_start}${ngx_binout}$NGX_OBJS${ngx_dirsep}nginx$ngx_long_cont$ngx_objs$ngx_libs$ngx_link
+$NGX_OBJS${ngx_dirsep}nginx-perl${ngx_binext}:	$ngx_deps$ngx_spacer
+	\$(LINK) ${ngx_long_start}${ngx_binout}$NGX_OBJS${ngx_dirsep}nginx-perl$ngx_long_cont$ngx_objs$ngx_libs$ngx_link
 	$ngx_rcc
 ${ngx_long_end}
 END

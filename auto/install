@@ -20,7 +20,7 @@ case ".$NGX_SBIN_PATH" in
     ;;
 
     .)
-        NGX_SBIN_PATH=$NGX_PREFIX/sbin/nginx
+        NGX_SBIN_PATH=$NGX_PREFIX/sbin/nginx-perl
     ;;
 
     *)
@@ -74,16 +74,16 @@ esac
 
 cat << END                                                    >> $NGX_MAKEFILE
 
-manpage:	$NGX_OBJS/nginx.8
+manpage:	$NGX_OBJS/nginx-perl.8
 
-$NGX_OBJS/nginx.8:	man/nginx.8 $NGX_AUTO_CONFIG_H
+$NGX_OBJS/nginx-perl.8:	man/nginx.8 $NGX_AUTO_CONFIG_H
 	sed -e "s|%%PREFIX%%|$NGX_PREFIX|" \\
 		-e "s|%%PID_PATH%%|$NGX_PID_PATH|" \\
 		-e "s|%%CONF_PATH%%|$NGX_CONF_PATH|" \\
 		-e "s|%%ERROR_LOG_PATH%%|${NGX_ERROR_LOG_PATH:-stderr}|" \\
-		< man/nginx.8 > $NGX_OBJS/nginx.8
+		< man/nginx.8 > $NGX_OBJS/nginx-perl.8
 
-install:	$NGX_OBJS${ngx_dirsep}nginx${ngx_binext} \
+install:	$NGX_OBJS${ngx_dirsep}nginx-perl${ngx_binext} \
 		$NGX_INSTALL_PERL_MODULES
 	test -d '\$(DESTDIR)$NGX_PREFIX' || mkdir -p '\$(DESTDIR)$NGX_PREFIX'
 
@@ -92,7 +92,7 @@ install:	$NGX_OBJS${ngx_dirsep}nginx${ngx_binext} \
 	test ! -f '\$(DESTDIR)$NGX_SBIN_PATH' \
 		|| mv '\$(DESTDIR)$NGX_SBIN_PATH' \
 			'\$(DESTDIR)$NGX_SBIN_PATH.old'
-	cp $NGX_OBJS/nginx '\$(DESTDIR)$NGX_SBIN_PATH'
+	cp $NGX_OBJS/nginx-perl '\$(DESTDIR)$NGX_SBIN_PATH'
 
 	test -d '\$(DESTDIR)$NGX_CONF_PREFIX' \
 		|| mkdir -p '\$(DESTDIR)$NGX_CONF_PREFIX'
@@ -125,8 +125,8 @@ install:	$NGX_OBJS${ngx_dirsep}nginx${ngx_binext} \
 		'\$(DESTDIR)$NGX_CONF_PREFIX/scgi_params.default'
 
 	test -f '\$(DESTDIR)$NGX_CONF_PATH' \
-		|| cp conf/nginx.conf '\$(DESTDIR)$NGX_CONF_PATH'
-	cp conf/nginx.conf '\$(DESTDIR)$NGX_CONF_PREFIX/nginx.conf.default'
+		|| cp conf/nginx-perl.conf '\$(DESTDIR)$NGX_CONF_PATH'
+	cp conf/nginx-perl.conf '\$(DESTDIR)$NGX_CONF_PREFIX/nginx-perl.conf.default'
 
 	test -d '\$(DESTDIR)`dirname "$NGX_PID_PATH"`' \
 		|| mkdir -p '\$(DESTDIR)`dirname "$NGX_PID_PATH"`'

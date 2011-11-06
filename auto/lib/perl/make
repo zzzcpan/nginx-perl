@@ -9,7 +9,8 @@ $NGX_OBJS/src/http/modules/perl/blib/arch/auto/Nginx/Nginx.so:		\
 		src/http/modules/perl/Nginx.xs				\
 		src/http/modules/perl/ngx_http_perl_module.h		\
 		$NGX_OBJS/src/http/modules/perl/Makefile
-	cp -p src/http/modules/perl/Nginx.* $NGX_OBJS/src/http/modules/perl/
+	cp -p src/http/modules/perl/Nginx.xs $NGX_OBJS/src/http/modules/perl/
+	cp -p src/http/modules/perl/*.pm $NGX_OBJS/src/http/modules/perl/
 
 	cd $NGX_OBJS/src/http/modules/perl && make
 
@@ -18,8 +19,10 @@ $NGX_OBJS/src/http/modules/perl/blib/arch/auto/Nginx/Nginx.so:		\
 
 $NGX_OBJS/src/http/modules/perl/Makefile:				\
 		src/http/modules/perl/Makefile.PL			\
-		src/http/modules/perl/Nginx.pm
-	cp -p src/http/modules/perl/Nginx.* $NGX_OBJS/src/http/modules/perl/
+		src/http/modules/perl/Nginx.pm				\
+		src/http/modules/perl/Util.pm
+	cp -p src/http/modules/perl/Nginx.xs $NGX_OBJS/src/http/modules/perl/
+	cp -p src/http/modules/perl/*.pm $NGX_OBJS/src/http/modules/perl/
 	cp -p src/http/modules/perl/typemap $NGX_OBJS/src/http/modules/perl/
 	cp -p src/http/modules/perl/Makefile.PL $NGX_OBJS/src/http/modules/perl/
 

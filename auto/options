@@ -457,10 +457,10 @@ if [ ".$NGX_PLATFORM" = ".win32" ]; then
 fi
 
 
-NGX_CONF_PATH=${NGX_CONF_PATH:-conf/nginx.conf}
+NGX_CONF_PATH=${NGX_CONF_PATH:-conf/nginx-perl.conf}
 NGX_CONF_PREFIX=`dirname $NGX_CONF_PATH`
-NGX_PID_PATH=${NGX_PID_PATH:-logs/nginx.pid}
-NGX_LOCK_PATH=${NGX_LOCK_PATH:-logs/nginx.lock}
+NGX_PID_PATH=${NGX_PID_PATH:-logs/nginx-perl.pid}
+NGX_LOCK_PATH=${NGX_LOCK_PATH:-logs/nginx-perl.lock}
 
 if [ ".$NGX_ERROR_LOG_PATH" = ".stderr" ]; then
     NGX_ERROR_LOG_PATH=

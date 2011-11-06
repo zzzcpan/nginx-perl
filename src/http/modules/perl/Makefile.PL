@@ -28,6 +28,7 @@ WriteMakefile(
     },
 
     PM => {
-        'Nginx.pm' => '$(INST_LIBDIR)/Nginx.pm'
+        'Nginx.pm' => '$(INST_LIBDIR)/Nginx.pm',
+        'Util.pm'  => '$(INST_LIBDIR)/Nginx/Util.pm'
     }
 );

@@ -212,11 +212,11 @@ main(int argc, char *const *argv)
     }
 
     if (ngx_show_version) {
-        ngx_log_stderr(0, "nginx version: " NGINX_VER);
+        ngx_log_stderr(0, "nginx-perl version: " NGINX_VER);
 
         if (ngx_show_help) {
             ngx_log_stderr(0,
-                "Usage: nginx [-?hvVtq] [-s signal] [-c filename] "
+                "Usage: nginx-perl [-?hvVtq] [-s signal] [-c filename] "
                              "[-p prefix] [-g directives]" CRLF CRLF
                 "Options:" CRLF
                 "  -?,-h         : this help" CRLF
