@@ -4,6 +4,7 @@ Makefile
 CHANGES.ru
 tmp/
 example/logs/
+hello/logs/
 *_temp
 .hg*
 example/

@@ -13,9 +13,5 @@ This is more of ideas list than TODO, but still
 
 	Also make sure to use the same SV when calling handler.
 
-    Reuse internal resolver.
-
-    SSL.
-
     Decide on removing G_EVAL. 
 
