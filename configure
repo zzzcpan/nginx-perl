@@ -2,6 +2,7 @@
 
 # Copyright (C) Igor Sysoev
 
+test -d hello/logs || mkdir hello/logs
 
 . auto/options
 . auto/init
