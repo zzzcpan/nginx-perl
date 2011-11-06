@@ -1091,6 +1091,47 @@ location_name(r)
         RETVAL
 
 
+SV *
+root(r)
+    CODE:
+        ngx_http_request_t        *r;
+        ngx_http_core_loc_conf_t  *clcf;
+
+        ngx_http_perl_set_request(r);
+
+        clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+
+        RETVAL = newSVpvn((char *) clcf->root.data, clcf->root.len); 
+    OUTPUT:
+        RETVAL
+
+
+SV *
+ctx(r, ...)
+    CODE:
+        ngx_http_request_t        *r;
+        ngx_http_core_loc_conf_t  *clcf;
+        ngx_http_perl_ctx_t       *ctx;
+
+        ngx_http_perl_set_request(r);
+
+        clcf = ngx_http_get_module_loc_conf(r, ngx_http_core_module);
+        ctx  = ngx_http_get_module_ctx(r, ngx_http_perl_module);
+
+        RETVAL = newSVsv(ctx->ctx);
+
+        if (items == 2) {
+            if (ctx->ctx != NULL) {
+                SvREFCNT_dec(ctx->ctx);
+                ctx->ctx = NULL;
+            }
+
+            ctx->ctx = newSVsv(ST(1));
+        }
+    OUTPUT:
+        RETVAL
+
+
 void
 ngx_log_error(errno, message)
     PROTOTYPE: $$

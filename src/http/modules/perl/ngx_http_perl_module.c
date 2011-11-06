@@ -79,6 +79,9 @@ static ngx_int_t ngx_http_perl_set_ssl(ngx_conf_t *cf,
 static void ngx_perl_ssl_handshake_handler(ngx_connection_t *c);
 #endif
 
+static void ngx_http_perl_ctx_cleanup(void *data);
+
+
 static ngx_command_t  ngx_http_perl_commands[] = {
 
     { ngx_string("perl_modules"),
@@ -200,6 +203,22 @@ ngx_http_perl_xs_init(pTHX)
 }
 
 
+static void
+ngx_http_perl_ctx_cleanup(void *data) 
+{
+    ngx_http_perl_ctx_t  *ctx;
+
+    ctx = (ngx_http_perl_ctx_t *) data;
+
+    if (ctx->ctx != NULL) {
+        SvREFCNT_dec(ctx->ctx);
+        ctx->ctx = NULL;
+    }
+
+    return;
+}
+
+
 static ngx_int_t
 ngx_http_perl_handler(ngx_http_request_t *r)
 {
@@ -215,8 +234,29 @@ static ngx_int_t
 ngx_http_perl_access_handler(ngx_http_request_t *r)
 {
     ngx_http_perl_loc_conf_t  *plcf;
+    ngx_http_perl_ctx_t       *ctx;
+    ngx_pool_cleanup_t        *ctxcln;
     ngx_int_t                  rc;
     dSP;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_perl_module);
+
+    if (ctx == NULL) {
+        ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_perl_ctx_t));
+        if (ctx == NULL) {
+            return NGX_ERROR;
+        }
+
+	ctxcln = ngx_pool_cleanup_add(r->pool, 0);
+	if (ctxcln == NULL) {
+            return NGX_ERROR;
+	}
+
+	ctxcln->data    = (void *) ctx;
+	ctxcln->handler = ngx_http_perl_ctx_cleanup;
+
+        ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
+    }
 
     plcf = ngx_http_get_module_loc_conf(r, ngx_http_perl_module);
 
@@ -251,6 +291,7 @@ ngx_http_perl_handle_request(ngx_http_request_t *r)
     ngx_int_t                   rc;
     ngx_str_t                   uri, args, *handler;
     ngx_http_perl_ctx_t        *ctx;
+    ngx_pool_cleanup_t         *ctxcln;
     ngx_http_perl_loc_conf_t   *plcf;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0, "perl handler");
@@ -263,6 +304,15 @@ ngx_http_perl_handle_request(ngx_http_request_t *r)
             ngx_http_finalize_request(r, NGX_ERROR);
             return;
         }
+
+	ctxcln = ngx_pool_cleanup_add(r->pool, 0);
+	if (ctxcln == NULL) {
+            ngx_http_finalize_request(r, NGX_ERROR);
+            return;
+	}
+
+	ctxcln->data    = (void *) ctx;
+	ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
     }
@@ -354,6 +404,7 @@ ngx_http_perl_variable(ngx_http_request_t *r, ngx_http_variable_value_t *v,
     ngx_int_t                   rc;
     ngx_str_t                   value;
     ngx_http_perl_ctx_t        *ctx;
+    ngx_pool_cleanup_t         *ctxcln;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "perl variable handler");
@@ -365,6 +416,14 @@ ngx_http_perl_variable(ngx_http_request_t *r, ngx_http_variable_value_t *v,
         if (ctx == NULL) {
             return NGX_ERROR;
         }
+
+	ctxcln = ngx_pool_cleanup_add(r->pool, 0);
+	if (ctxcln == NULL) {
+            return NGX_ERROR;
+	}
+
+	ctxcln->data    = (void *) ctx;
+	ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
     }
@@ -406,6 +465,7 @@ ngx_http_perl_ssi(ngx_http_request_t *r, ngx_http_ssi_ctx_t *ssi_ctx,
     ngx_str_t                  *handler, **args;
     ngx_uint_t                  i;
     ngx_http_perl_ctx_t        *ctx;
+    ngx_pool_cleanup_t         *ctxcln;
 
     ngx_log_debug0(NGX_LOG_DEBUG_HTTP, r->connection->log, 0,
                    "perl ssi handler");
@@ -417,6 +477,14 @@ ngx_http_perl_ssi(ngx_http_request_t *r, ngx_http_ssi_ctx_t *ssi_ctx,
         if (ctx == NULL) {
             return NGX_ERROR;
         }
+
+	ctxcln = ngx_pool_cleanup_add(r->pool, 0);
+	if (ctxcln == NULL) {
+            return NGX_ERROR;
+	}
+
+	ctxcln->data    = (void *) ctx;
+	ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
     }
