@@ -407,6 +407,62 @@ header_in(r, key)
         ST(0) = TARG;
 
 
+SV *
+headers_in(r)
+    CODE:
+        ngx_http_request_t         *r;
+        ngx_uint_t                  i, k, n;
+        ngx_list_part_t            *part;
+        ngx_table_elt_t            *h;
+        HV                         *hv;
+        SV                        **sv_ref, *sv;
+        char                        tmp[2001];
+
+        ngx_http_perl_set_request(r);
+
+        hv = newHV();
+
+        part = &r->headers_in.headers.part;
+        h = part->elts;
+
+        for (i = 0; /* void */ ; i++) {
+
+            if (i >= part->nelts) {
+                if (part->next == NULL) {
+                    break;
+                }
+
+                part = part->next;
+                h = part->elts;
+                i = 0;
+            }
+
+            for ( k = 0 ; k < h[i].key.len ; k++ ) {
+                tmp[k] = toLOWER ( h[i].key.data[k] );
+            }
+            tmp[ h[i].key.len ] = 0;
+
+            sv_ref = hv_fetch ( hv, tmp, h[i].key.len, 1 );
+
+            if ( sv_ref == NULL ) {
+                XSRETURN_UNDEF;
+            }
+
+            sv = *sv_ref;
+
+            if ( !SvOK (sv) ) {
+                SvSetSV ( sv, newRV_noinc ( (SV *) newAV() ) );
+            }
+            
+            av_push ( (AV *) SvRV (sv), 
+                      newSVpvn (h[i].value.data, h[i].value.len) );
+        }
+
+        RETVAL = newRV_noinc((SV *) hv);
+    OUTPUT:
+        RETVAL
+
+
 void
 has_request_body(r, next)
     CODE:
