@@ -253,13 +253,13 @@ ngx_http_perl_access_handler(ngx_http_request_t *r)
             return NGX_ERROR;
         }
 
-	ctxcln = ngx_pool_cleanup_add(r->pool, 0);
-	if (ctxcln == NULL) {
+        ctxcln = ngx_pool_cleanup_add(r->pool, 0);
+        if (ctxcln == NULL) {
             return NGX_ERROR;
-	}
+        }
 
-	ctxcln->data    = (void *) ctx;
-	ctxcln->handler = ngx_http_perl_ctx_cleanup;
+        ctxcln->data    = (void *) ctx;
+        ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
 
@@ -313,14 +313,14 @@ ngx_http_perl_handle_request(ngx_http_request_t *r)
             return;
         }
 
-	ctxcln = ngx_pool_cleanup_add(r->pool, 0);
-	if (ctxcln == NULL) {
+        ctxcln = ngx_pool_cleanup_add(r->pool, 0);
+        if (ctxcln == NULL) {
             ngx_http_finalize_request(r, NGX_ERROR);
             return;
-	}
+        }
 
-	ctxcln->data    = (void *) ctx;
-	ctxcln->handler = ngx_http_perl_ctx_cleanup;
+        ctxcln->data    = (void *) ctx;
+        ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
 
@@ -427,13 +427,13 @@ ngx_http_perl_variable(ngx_http_request_t *r, ngx_http_variable_value_t *v,
             return NGX_ERROR;
         }
 
-	ctxcln = ngx_pool_cleanup_add(r->pool, 0);
-	if (ctxcln == NULL) {
+        ctxcln = ngx_pool_cleanup_add(r->pool, 0);
+        if (ctxcln == NULL) {
             return NGX_ERROR;
-	}
+        }
 
-	ctxcln->data    = (void *) ctx;
-	ctxcln->handler = ngx_http_perl_ctx_cleanup;
+        ctxcln->data    = (void *) ctx;
+        ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
 
@@ -490,13 +490,13 @@ ngx_http_perl_ssi(ngx_http_request_t *r, ngx_http_ssi_ctx_t *ssi_ctx,
             return NGX_ERROR;
         }
 
-	ctxcln = ngx_pool_cleanup_add(r->pool, 0);
-	if (ctxcln == NULL) {
+        ctxcln = ngx_pool_cleanup_add(r->pool, 0);
+        if (ctxcln == NULL) {
             return NGX_ERROR;
-	}
+        }
 
-	ctxcln->data    = (void *) ctx;
-	ctxcln->handler = ngx_http_perl_ctx_cleanup;
+        ctxcln->data    = (void *) ctx;
+        ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
 
