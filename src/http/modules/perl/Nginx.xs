@@ -456,8 +456,9 @@ headers_in(r)
             sv = *sv_ref;
 
             if ( !SvOK (sv) ) {
-                SvSetSV ( sv, newRV_noinc ( (SV *) newAV() ) );
-            }
+                SvSetSV (  sv, 
+                           sv_2mortal ( newRV_noinc ((SV *) newAV()) )  ); 
+            } 
             
             av_push ( (AV *) SvRV (sv), 
                       newSVpvn (h[i].value.data, h[i].value.len) );
