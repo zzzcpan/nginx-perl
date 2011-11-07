@@ -1140,8 +1140,6 @@ ngx_http_perl_app(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     sv = newSVpvf("do '%s'", (char *) value[1].data);
 
-    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "perl_app: %s", SvPVX(sv));
-
     plcf->sub = eval_pv(SvPVX(sv), 1);
 
     SvREFCNT_dec(sv);
