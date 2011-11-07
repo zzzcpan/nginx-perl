@@ -25,6 +25,7 @@ typedef struct {
 #if (NGX_HTTP_SSL)
     ngx_ssl_t         *ssl;
 #endif
+    ngx_int_t          read_body;
 } ngx_http_perl_loc_conf_t;
 
 
@@ -57,6 +58,7 @@ static void *ngx_http_perl_create_loc_conf(ngx_conf_t *cf);
 static char *ngx_http_perl_merge_loc_conf(ngx_conf_t *cf, void *parent,
     void *child);
 static char *ngx_http_perl(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_http_perl_app(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static char *ngx_http_perl_access(ngx_conf_t *cf, ngx_command_t *cmd, 
     void *conf);
 static char *ngx_http_perl_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
@@ -108,6 +110,13 @@ static ngx_command_t  ngx_http_perl_commands[] = {
     { ngx_string("perl_handler"),
       NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF|NGX_CONF_TAKE1,
       ngx_http_perl,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
+    { ngx_string("perl_app"),
+      NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF|NGX_CONF_TAKE1,
+      ngx_http_perl_app,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
@@ -328,8 +337,26 @@ ngx_http_perl_handle_request(ngx_http_request_t *r)
     }
 
 
+    plcf = ngx_http_get_module_loc_conf(r, ngx_http_perl_module);
+
+    if (plcf->read_body && r->headers_in.content_length_n > 0) {
+        r->request_body_in_single_buf = 1;
+        r->request_body_in_persistent_file = 1;
+        r->request_body_in_clean_file = 1;
+
+        if (r->request_body_in_file_only) {
+            r->request_body_file_log_level = 0;
+        }
+
+        plcf->read_body = 0;
+
+        ngx_http_read_client_request_body(r, ngx_http_perl_handle_request);
+        ngx_http_finalize_request(r, NGX_DONE);
+        return;
+    }
+
+
     if (ctx->next == NULL) {
-        plcf = ngx_http_get_module_loc_conf(r, ngx_http_perl_module);
         sub = plcf->sub;
         handler = &plcf->handler;
     } else {
@@ -1075,6 +1102,51 @@ ngx_http_perl(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     if (plcf->sub == NULL) {
         plcf->sub = newSVpvn((char *) value[1].data, value[1].len);
     }
+
+    clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
+    clcf->handler = ngx_http_perl_handler;
+
+    return NGX_CONF_OK;
+}
+
+
+static char *
+ngx_http_perl_app(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+{
+    ngx_http_perl_loc_conf_t *plcf = conf;
+
+    ngx_str_t                  *value;
+    ngx_http_core_loc_conf_t   *clcf;
+    ngx_http_perl_main_conf_t  *pmcf;
+    SV                         *sv;
+
+    value = cf->args->elts;
+
+    if (plcf->handler.data) {
+        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                           "duplicate perl_handler \"%V\"", &value[1]);
+        return NGX_CONF_ERROR;
+    }
+
+    pmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_perl_module);
+
+    if (my_perl == NULL) {
+        if (ngx_http_perl_init_interpreter(cf, pmcf) != NGX_CONF_OK) {
+            return NGX_CONF_ERROR;
+        }
+    }
+
+    plcf->handler = value[1];
+
+    sv = newSVpvf("do '%s'", (char *) value[1].data);
+
+    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "perl_app: %s", SvPVX(sv));
+
+    plcf->sub = eval_pv(SvPVX(sv), 1);
+
+    SvREFCNT_dec(sv);
+
+    plcf->read_body = 1;
 
     clcf = ngx_http_conf_get_module_loc_conf(cf, ngx_http_core_module);
     clcf->handler = ngx_http_perl_handler;
