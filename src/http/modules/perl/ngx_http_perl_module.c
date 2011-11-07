@@ -215,6 +215,12 @@ ngx_http_perl_ctx_cleanup(void *data)
         ctx->ctx = NULL;
     }
 
+    if (ctx->r != NULL) {
+        SvOK_off(SvRV(ctx->r));
+        SvREFCNT_dec(ctx->r);
+        ctx->r = NULL;
+    }
+
     return;
 }
 
@@ -256,6 +262,8 @@ ngx_http_perl_access_handler(ngx_http_request_t *r)
 	ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
+
+        ctx->r = sv_bless(newRV_noinc(newSViv(PTR2IV(r))), nginx_stash);
     }
 
     plcf = ngx_http_get_module_loc_conf(r, ngx_http_perl_module);
@@ -268,7 +276,7 @@ ngx_http_perl_access_handler(ngx_http_request_t *r)
     SAVETMPS;
 
     PUSHMARK(sp);
-    XPUSHs(sv_2mortal(sv_bless(newRV_noinc(newSViv(PTR2IV(r))), nginx_stash)));
+    XPUSHs(ctx->r);
     PUTBACK;
 
     call_sv(plcf->access_sub, G_SCALAR);
@@ -315,6 +323,8 @@ ngx_http_perl_handle_request(ngx_http_request_t *r)
 	ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
+
+        ctx->r = sv_bless(newRV_noinc(newSViv(PTR2IV(r))), nginx_stash);
     }
 
 
@@ -426,6 +436,8 @@ ngx_http_perl_variable(ngx_http_request_t *r, ngx_http_variable_value_t *v,
 	ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
+
+        ctx->r = sv_bless(newRV_noinc(newSViv(PTR2IV(r))), nginx_stash);
     }
 
     value.data = NULL;
@@ -487,6 +499,8 @@ ngx_http_perl_ssi(ngx_http_request_t *r, ngx_http_ssi_ctx_t *ssi_ctx,
 	ctxcln->handler = ngx_http_perl_ctx_cleanup;
 
         ngx_http_set_ctx(r, ctx, ngx_http_perl_module);
+
+        ctx->r = sv_bless(newRV_noinc(newSViv(PTR2IV(r))), nginx_stash);
     }
 
     ctx->ssi = ssi_ctx;
@@ -743,15 +757,17 @@ static ngx_int_t
 ngx_http_perl_call_handler(pTHX_ ngx_http_request_t *r, SV *sub,
     SV **args, ngx_str_t *handler, ngx_str_t *rv)
 {
-    SV                *sv;
-    int                n, status;
-    char              *line;
-    u_char            *err;
-    STRLEN             len, n_a;
-    ngx_uint_t         i;
-    ngx_connection_t  *c;
+    int                   n, status;
+    char                 *line;
+    u_char               *err;
+    STRLEN                len, n_a;
+    ngx_uint_t            i;
+    ngx_connection_t     *c;
+    ngx_http_perl_ctx_t  *ctx;
 
     dSP;
+
+    ctx = ngx_http_get_module_ctx(r, ngx_http_perl_module);
 
     status = 0;
 
@@ -760,8 +776,7 @@ ngx_http_perl_call_handler(pTHX_ ngx_http_request_t *r, SV *sub,
 
     PUSHMARK(sp);
 
-    sv = sv_2mortal(sv_bless(newRV_noinc(newSViv(PTR2IV(r))), nginx_stash));
-    XPUSHs(sv);
+    XPUSHs(ctx->r);
 
     if (args) {
         EXTEND(sp, (intptr_t) args[0]);

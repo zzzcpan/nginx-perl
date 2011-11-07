@@ -15,6 +15,13 @@
 
 
 #define ngx_http_perl_set_request(r)                                          \
+    if ( !SvOK( ST(0) ) || !SvOK(SvRV( ST(0) )) ) {                           \
+        ngx_log_error(NGX_LOG_ERR,                                            \
+                      ngx_perl_log ? ngx_perl_log : ngx_cycle->log,           \
+                      0,                                                      \
+                      "perl: attempt to use destroyed request");              \
+        XSRETURN_UNDEF;                                                       \
+    }                                                                         \
     r = INT2PTR(ngx_http_request_t *, SvIV((SV *) SvRV(ST(0))))
 
 

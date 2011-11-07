@@ -24,6 +24,7 @@ typedef struct {
     ngx_str_t                 redirect_uri;
     ngx_str_t                 redirect_args;
 
+    SV                       *r;
     SV                       *ctx;
 
     SV                       *next;
