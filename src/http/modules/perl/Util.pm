@@ -119,7 +119,7 @@ sub http_req ($$\$$&) {
             return NGX_READ;
         };
 
-        ngx_reader $c, $$buf_ref, 0, 2000, $timeout, sub {
+        ngx_reader $c, $$buf_ref, 0, 4000, $timeout, sub {
 
             &$cb(), 
             return NGX_CLOSE  
@@ -130,9 +130,7 @@ sub http_req ($$\$$&) {
 
             my %h;
 
-            ($h{_version}, 
-             $h{_status}, 
-             $h{_message}) = 
+            @{h}{'_version', '_status', '_message'} = 
                  $$buf_ref =~ / 
                     ^ \s*  ( HTTP\/\d\.\d )  
                       \s+  ( \d+ )  
