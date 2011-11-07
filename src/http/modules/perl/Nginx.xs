@@ -437,6 +437,11 @@ headers_in(r)
                 i = 0;
             }
 
+            if ( h[i].key.len > 2000 ) {
+                /* sliently ignoring large headers */
+                continue;
+            }
+
             for ( k = 0 ; k < h[i].key.len ; k++ ) {
                 tmp[k] = toLOWER ( h[i].key.data[k] );
             }
