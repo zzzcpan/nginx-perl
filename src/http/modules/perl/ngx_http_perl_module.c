@@ -105,7 +105,7 @@ static ngx_command_t  ngx_http_perl_commands[] = {
       offsetof(ngx_http_perl_main_conf_t, init_worker),
       NULL },
 
-    { ngx_string("perl"),
+    { ngx_string("perl_handler"),
       NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF|NGX_CONF_TAKE1,
       ngx_http_perl,
       NGX_HTTP_LOC_CONF_OFFSET,
