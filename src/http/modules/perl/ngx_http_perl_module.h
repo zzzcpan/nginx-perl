@@ -36,6 +36,7 @@ typedef struct {
 #if (NGX_HTTP_SSI)
     ngx_http_ssi_ctx_t       *ssi;
 #endif
+    ngx_int_t                 have_body;
 } ngx_http_perl_ctx_t;
 
 

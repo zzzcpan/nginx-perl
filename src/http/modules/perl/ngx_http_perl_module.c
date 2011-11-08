@@ -346,7 +346,9 @@ ngx_http_perl_handle_request(ngx_http_request_t *r)
 
     plcf = ngx_http_get_module_loc_conf(r, ngx_http_perl_module);
 
-    if (plcf->read_body && r->headers_in.content_length_n > 0) {
+    if (plcf->read_body && !ctx->have_body && 
+        r->headers_in.content_length_n > 0) 
+    {
         r->request_body_in_single_buf = 1;
         r->request_body_in_persistent_file = 1;
         r->request_body_in_clean_file = 1;
@@ -355,7 +357,7 @@ ngx_http_perl_handle_request(ngx_http_request_t *r)
             r->request_body_file_log_level = 0;
         }
 
-        plcf->read_body = 0;
+        ctx->have_body = 1;
 
         ngx_http_read_client_request_body(r, ngx_http_perl_handle_request);
         ngx_http_finalize_request(r, NGX_DONE);
