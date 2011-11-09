@@ -1682,6 +1682,49 @@ ngx_perl_resolver_handler(ngx_resolver_ctx_t *ctx)
 }
 
 
+ngx_int_t
+ngx_perl_connection_init(ngx_connection_t *c) 
+{
+    ngx_pool_t             *pool;
+    ngx_perl_connection_t  *plc;
+    ngx_pool_cleanup_t     *plccln;
+
+    errno = 0;
+
+    pool = c->pool;
+
+    plc = ngx_pcalloc(pool, sizeof(ngx_perl_connection_t));
+
+    if (plc == NULL) {
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0,
+                      "ngx_perl_connector: ngx_pcalloc() failed");
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_ENOMEM;
+        return 0;
+    }
+
+    plccln = ngx_pool_cleanup_add(pool, 0);
+
+    if (plccln == NULL) {
+        ngx_log_error(NGX_LOG_ERR, pool->log, 0,
+                      "ngx_perl_connector: ngx_pool_cleanup_add() failed");
+        ngx_destroy_pool(pool);
+        errno = NGX_PERL_ENOMEM;
+        return 0;
+    }
+
+    plccln->data    = (void *) plc;
+    plccln->handler = ngx_perl_connection_cleanup;
+
+    c->data = (void *) plc;
+
+    c->write->handler = ngx_perl_dummy_handler;
+    c->read->handler  = ngx_perl_dummy_handler;
+
+    return 1;
+}
+
+
 void
 ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb) 
 {

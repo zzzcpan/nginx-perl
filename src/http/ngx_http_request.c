@@ -1664,7 +1664,8 @@ ngx_http_process_request(ngx_http_request_t *r)
 
     ngx_http_handler(r);
 
-    ngx_http_run_posted_requests(c);
+    if ( !r->headers_in.taken ) 
+        ngx_http_run_posted_requests(c);
 }
 
 

@@ -227,6 +227,8 @@ typedef struct {
     unsigned                          chrome:1;
     unsigned                          safari:1;
     unsigned                          konqueror:1;
+
+    unsigned                          taken:1;
 } ngx_http_headers_in_t;
 
 

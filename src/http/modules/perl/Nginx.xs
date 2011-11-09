@@ -1096,6 +1096,34 @@ log_error(r, err, msg)
         ngx_log_error(NGX_LOG_ERR, r->connection->log, e, "perl: %s", p);
 
 
+SV *
+take_connection(r)
+    CODE:
+        ngx_http_request_t     *r;
+
+        ngx_http_perl_set_request(r);
+
+        if ( !ngx_perl_connection_init(r->connection) ) {
+            XSRETURN_UNDEF;
+        }
+
+        r->headers_in.taken = 1;
+        RETVAL = newSViv(PTR2IV(r->connection));
+    OUTPUT:
+        RETVAL
+
+
+void
+give_connection(r)
+    CODE:
+        ngx_http_request_t     *r;
+
+        ngx_http_perl_set_request(r);
+
+        r->connection->data = r;
+        r->headers_in.taken = 0;
+
+
 void
 main_count_inc(r)
     CODE:
