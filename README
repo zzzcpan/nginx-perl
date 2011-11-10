@@ -353,6 +353,100 @@ ASYNCHRONOUS API
                 return NGX_WRITE;
             };
 
+    ngx_writer $connection, $buf, $timeout, sub { };
+        Creates write handler for $connection with buffer $buf and write
+        timeout in <$timeout>.
+
+        Internally $buf and $timeout are stored as references, so changing
+        them will influence writer's behavior.
+
+        Expects one of the following control flow constants as a result of
+        callback:
+
+            NGX_CLOSE
+            NGX_READ 
+            NGX_WRITE
+            NGX_SSL_HANDSHAKE
+
+        On error calls back with $! set to some value. NGX_EOF should be
+        treated as fatal error here.
+
+        Example:
+
+            my $buf = "GET /\n";
+
+            ngx_writer $c, $buf, 15, sub {
+
+                return NGX_CLOSE
+                    if $!;
+                ...
+
+                return NGX_READ;
+            };
+
+    ngx_ssl_handshaker $connection, sub { };
+        Creates its own internal handler for both reading and writing and
+        tries to do SSL handshake.
+
+        Expects one of the following control flow constants as a result of
+        callback:
+
+            NGX_CLOSE
+            NGX_READ 
+            NGX_WRITE
+            NGX_SSL_HANDSHAKE
+
+        On error calls back with $! set to some value.
+
+        It's important to understand that handshaker will replace your
+        previous reader and writer, so you have to create new ones.
+
+        Typically it should be called inside connector's callback:
+
+            ngx_connector ... sub {
+
+                return NGX_CLOSE 
+                    if $!;
+
+                my $c = shift;
+
+                ngx_ssl_handshaker $c, sub {
+            
+                    return NGX_CLOSE
+                        if $!;
+                    ...
+
+                    ngx_writer ... sub { };
+
+                    ngx_reader ... sub { };
+
+                    return NGX_WRITE;
+                };
+
+                return NGX_SSL_HANDSHAKE;
+            };
+
+    ngx_resolver $name, $timeout, sub { };
+        Creates resolver's handler and tries to resolve $name in $timeout
+        seconds using resolver specified in nginx-perl.conf.
+
+        On success returns all resolved IP addresses into @_.
+
+        On error calls back with $! set to some value.
+
+        This is a thin wrapper around nginx's internal resolver. All its
+        current problems apply. To use it in production you'll need a local
+        resolver, like named that does actual resolving.
+
+            ngx_resolver $host, $timeout, sub {
+                retrun
+                    if $!;
+
+                warn join(', ', @_)."\n";
+
+                ...
+            };
+
 CONNECTION TAKEOVER
     It is possible to takeover client connection completely and create you
     own reader and writer on that connection. You need this for websockets
