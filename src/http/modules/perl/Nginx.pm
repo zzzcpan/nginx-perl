@@ -342,12 +342,14 @@ Most of the ngx_* handlers support return value and even optimized
 for that kind of behavior.
 
 Functions take connection as an argument:
+
     ngx_read($c)
     ngx_write($c)
     ngx_ssl_handshake($c)
     ngx_close($c)
 
 Return values only work on current connection:
+
     return NGX_READ;
     return NGX_WRITE;
     return NGX_SSL_HANDSHAKE;
