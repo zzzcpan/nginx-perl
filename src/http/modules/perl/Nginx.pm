@@ -100,12 +100,15 @@ __END__
 
 =head1 NAME
 
-Nginx - full featured perl support for nginx
+Nginx - full-featured perl support for nginx
 
 =head1 SYNOPSIS
 
     # nginx-perl.conf
     ... 
+
+    perl_inc      /path/to/lib;
+    perl_require  My::App;
 
     http {
         server {
@@ -138,7 +141,7 @@ Nginx - full featured perl support for nginx
 
 =head1 DESCRIPTION
 
-Nginx with capital I<N> is a part of B<nginx-perl>.
+Nginx with capital I<N> is a part of B<nginx-perl> distribution.
 
 nginx-perl is aimed to support asynchronous functions for embedded perl
 along with other little features to make it nice and usable perl web server.
@@ -154,6 +157,7 @@ Currently includes:
     - app handlers (perl_app);
     - configuration level eval (perl_eval);
     - init_worker handlers (perl_init_worker);
+    - client connection takeover for websockets, etc;
 
 
 =head1 INSTALLATION
@@ -201,6 +205,18 @@ Same as Perl's own C<require>.
         perl_require  My/App.pm;
 
 
+=item perl_init_worker  My::App::init_worker;
+
+Adds a handler to call on worker's start.
+
+    http {
+        perl_inc          /path/to/lib;
+        perl_require      My/App.pm;
+
+        perl_init_worker  My::App::init_worker;
+        perl_init_worker  My::AnotherApp::init_worker;
+
+
 =item perl_handler  My::App::handler; 
 
 Sets current location's http content handler (a.k.a. http handler).
@@ -213,7 +229,7 @@ Sets current location's http content handler (a.k.a. http handler).
 
 =item perl_access  My::App::access_handler; 
 
-Adds http access handler to the access phase of current location.
+Adds an http access handler to the access phase of current location.
 
     http {
         server {
@@ -224,7 +240,7 @@ Adds http access handler to the access phase of current location.
 
 =item perl_eval  '$My::App::CONF{foo} = "bar"';
 
-Evaluate some perl code on configuration level. Useful if you 
+Evaluates some perl code on configuration level. Useful if you 
 need to configure some perl modules directly fron F<nginx-perl.conf>.
 
     http {
@@ -332,6 +348,9 @@ because it allows to avoid post processing response the old way.
 
 =head1 HTTP ACCESS HANDLER
 
+todo
+
+=head1 
 
 
 =head1 FLOW CONTROL
@@ -402,12 +421,99 @@ Example:
 
         return NGX_CLOSE
             if $!;
-
         ...
+    };
 
+=head1 ASYNCHRONOUS API
+
+=over 4
+
+=item ngx_timer $after, $repeat, sub { };
+
+Creates new timer and calls back after C<$after> seconds.
+If C<$repeat> is set reschedules the timer to call back again after 
+C<$repeat> seconds or destroys it otherwise.
+
+Internally C<$repeat> is stored as a refence, so changing it will influence
+rescheduling behaviour.
+
+Simple example calls back just once after 1 second:
+
+    ngx_timer 1, 0, sub {
+        warn "tada\n";
     };
 
 
+This one is a bit trickier, calls back after 5, 4, 3, 2, 1 seconds 
+and destroys itself:
+
+    my $repeat = 5;
+
+    ngx_timer $repeat, $repeat, sub {
+        $repeat--;
+    };
+
+
+=item ngx_connector $ip, $port, $timeout, sub { };
+
+Creates connect handler and attempts to connect to C<$ip:$port> within 
+C<$timeout> seconds. Calls back with connection in C<@_> afterwards. 
+On error calls back with C<$!> set to some value.
+
+Expects one of the following control flow constants as a result of callback: 
+
+    NGX_CLOSE
+    NGX_READ 
+    NGX_WRITE
+    NGX_SSL_HANDSHAKE
+
+Example:
+
+    ngx_connector $ip, 80, 15, sub {
+
+        return NGX_CLOSE
+            if $!;
+
+        my $c = shift;
+        ...
+
+        return NGX_READ;
+    };
+
+
+=item ngx_reader $connection, $buf, $min, $max, $timeout, sub { };
+
+Creates read handler for C<$connection> with buffer C<$buf>.
+C<$min> indicates how much data should be present in C<$buf> 
+before the callback and C<$max> limits total length of C<$buf>.
+
+Internally C<$buf>, C<$min>, C<$max> and C<$timeout> are stored
+as refernces, so you can change them at any time to influence
+reader's behavior.
+
+Expects one of the following control flow constants as a result of callback: 
+
+    NGX_CLOSE
+    NGX_READ 
+    NGX_WRITE
+    NGX_SSL_HANDSHAKE
+
+On error calls back with C<$!> set to some value, including 
+NGX_EOF in case of EOF. 
+
+    my $buf;
+
+    ngx_reader $c, $buf, $min, $max, $timeout, sub {
+        
+        return NGX_CLOSE
+            if $! && $! != NGX_EOF;
+        ...
+
+        return NGX_WRITE;
+    };
+
+
+=back
 
 
 
@@ -460,7 +566,6 @@ from your HTTP handler:
                 }
 
                 ...
-
             };
 
             ngx_writer $c, ... , sub {
@@ -473,7 +578,6 @@ from your HTTP handler:
                 }
 
                 ...
-
             };
 
             ngx_read($c);

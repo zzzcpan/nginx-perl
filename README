@@ -1,9 +1,12 @@
 NAME
-    Nginx - full featured perl support for nginx
+    Nginx - full-featured perl support for nginx
 
 SYNOPSIS
         # nginx-perl.conf
         ... 
+
+        perl_inc      /path/to/lib;
+        perl_require  My::App;
 
         http {
             server {
@@ -33,7 +36,7 @@ SYNOPSIS
         }
 
 DESCRIPTION
-    Nginx with capital *N* is a part of nginx-perl.
+    Nginx with capital *N* is a part of nginx-perl distribution.
 
     nginx-perl is aimed to support asynchronous functions for embedded perl
     along with other little features to make it nice and usable perl web
@@ -50,6 +53,7 @@ DESCRIPTION
         - app handlers (perl_app);
         - configuration level eval (perl_eval);
         - init_worker handlers (perl_init_worker);
+        - client connection takeover for websockets, etc;
 
 INSTALLATION
     In this distribution perl module is enabled by default, so just
@@ -86,6 +90,16 @@ CONFIGURATION DIRECTIVES
                 perl_inc      /path/to/lib;
                 perl_require  My/App.pm;
 
+    perl_init_worker My::App::init_worker;
+        Adds a handler to call on worker's start.
+
+            http {
+                perl_inc          /path/to/lib;
+                perl_require      My/App.pm;
+
+                perl_init_worker  My::App::init_worker;
+                perl_init_worker  My::AnotherApp::init_worker;
+
     perl_handler My::App::handler;
         Sets current location's http content handler (a.k.a. http handler).
 
@@ -95,7 +109,7 @@ CONFIGURATION DIRECTIVES
                         perl_handler My::App::Handler;
 
     perl_access My::App::access_handler;
-        Adds http access handler to the access phase of current location.
+        Adds an http access handler to the access phase of current location.
 
             http {
                 server {
@@ -104,7 +118,7 @@ CONFIGURATION DIRECTIVES
                         perl_handler My::App::Handler;
 
     perl_eval '$My::App::CONF{foo} = "bar"';
-        Evaluate some perl code on configuration level. Useful if you need
+        Evaluates some perl code on configuration level. Useful if you need
         to configure some perl modules directly fron nginx-perl.conf.
 
             http {
@@ -189,6 +203,9 @@ HTTP CONTENT HANDLER
     because it allows to avoid post processing response the old way.
 
 HTTP ACCESS HANDLER
+    todo
+
+
 FLOW CONTROL
     To specify what to do after each callback we can either call some
     function or return some value and let handler do it for us. Most of the
@@ -253,10 +270,88 @@ ERROR HANDLING
 
             return NGX_CLOSE
                 if $!;
-
             ...
-
         };
+
+ASYNCHRONOUS API
+    ngx_timer $after, $repeat, sub { };
+        Creates new timer and calls back after $after seconds. If $repeat is
+        set reschedules the timer to call back again after $repeat seconds
+        or destroys it otherwise.
+
+        Internally $repeat is stored as a refence, so changing it will
+        influence rescheduling behaviour.
+
+        Simple example calls back just once after 1 second:
+
+            ngx_timer 1, 0, sub {
+                warn "tada\n";
+            };
+
+        This one is a bit trickier, calls back after 5, 4, 3, 2, 1 seconds
+        and destroys itself:
+
+            my $repeat = 5;
+
+            ngx_timer $repeat, $repeat, sub {
+                $repeat--;
+            };
+
+    ngx_connector $ip, $port, $timeout, sub { };
+        Creates connect handler and attempts to connect to "$ip:$port"
+        within $timeout seconds. Calls back with connection in @_
+        afterwards. On error calls back with $! set to some value.
+
+        Expects one of the following control flow constants as a result of
+        callback:
+
+            NGX_CLOSE
+            NGX_READ 
+            NGX_WRITE
+            NGX_SSL_HANDSHAKE
+
+        Example:
+
+            ngx_connector $ip, 80, 15, sub {
+
+                return NGX_CLOSE
+                    if $!;
+
+                my $c = shift;
+                ...
+
+                return NGX_READ;
+            };
+
+    ngx_reader $connection, $buf, $min, $max, $timeout, sub { };
+        Creates read handler for $connection with buffer $buf. $min
+        indicates how much data should be present in $buf before the
+        callback and $max limits total length of $buf.
+
+        Internally $buf, $min, $max and $timeout are stored as refernces, so
+        you can change them at any time to influence reader's behavior.
+
+        Expects one of the following control flow constants as a result of
+        callback:
+
+            NGX_CLOSE
+            NGX_READ 
+            NGX_WRITE
+            NGX_SSL_HANDSHAKE
+
+        On error calls back with $! set to some value, including NGX_EOF in
+        case of EOF.
+
+            my $buf;
+
+            ngx_reader $c, $buf, $min, $max, $timeout, sub {
+        
+                return NGX_CLOSE
+                    if $! && $! != NGX_EOF;
+                ...
+
+                return NGX_WRITE;
+            };
 
 CONNECTION TAKEOVER
     It is possible to takeover client connection completely and create you
@@ -299,7 +394,6 @@ CONNECTION TAKEOVER
                     }
 
                     ...
-
                 };
 
                 ngx_writer $c, ... , sub {
@@ -312,7 +406,6 @@ CONNECTION TAKEOVER
                     }
 
                     ...
-
                 };
 
                 ngx_read($c);
