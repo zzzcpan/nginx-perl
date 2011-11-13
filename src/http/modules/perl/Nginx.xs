@@ -1229,6 +1229,23 @@ ctx(r, ...)
         RETVAL
 
 
+SV *
+ngx_prefix()
+    ALIAS:
+        ngx_conf_prefix = 1
+    CODE:
+        
+        if (ix == 1) {
+            RETVAL = newSVpvn ( ngx_cycle->conf_prefix.data, 
+                                ngx_cycle->conf_prefix.len   );
+        } else {
+            RETVAL = newSVpvn ( ngx_cycle->prefix.data, 
+                                ngx_cycle->prefix.len   );
+        }
+    OUTPUT:
+        RETVAL
+
+
 void
 ngx_log_error(errno, message)
     PROTOTYPE: $$

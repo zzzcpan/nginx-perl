@@ -7,6 +7,8 @@ require Exporter;
 our @ISA    = qw(Exporter);
 our @EXPORT = qw(
 
+    ngx_prefix
+    ngx_conf_prefix
     ngx_log_error
     ngx_log_notice
     ngx_log_info
