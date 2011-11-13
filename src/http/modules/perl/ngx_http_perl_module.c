@@ -14,6 +14,7 @@ typedef struct {
     ngx_array_t       *modules;
     ngx_array_t       *requires;
     ngx_array_t       *init_worker;
+    ngx_array_t       *exit_worker;
 } ngx_http_perl_main_conf_t;
 
 
@@ -65,6 +66,7 @@ static char *ngx_http_perl_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 static char *ngx_http_perl_eval(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 static ngx_int_t ngx_http_perl_init_worker(ngx_cycle_t *cycle);
+static void ngx_http_perl_exit_worker(ngx_cycle_t *cycle);
 static void ngx_http_perl_exit(ngx_cycle_t *cycle);
 
 static void ngx_perl_timer_callback(ngx_event_t *ev);
@@ -112,6 +114,13 @@ static ngx_command_t  ngx_http_perl_commands[] = {
       ngx_conf_set_str_array_slot,
       NGX_HTTP_MAIN_CONF_OFFSET,
       offsetof(ngx_http_perl_main_conf_t, init_worker),
+      NULL },
+
+    { ngx_string("perl_exit_worker"),
+      NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_array_slot,
+      NGX_HTTP_MAIN_CONF_OFFSET,
+      offsetof(ngx_http_perl_main_conf_t, exit_worker),
       NULL },
 
     { ngx_string("perl_handler"),
@@ -178,7 +187,7 @@ ngx_module_t  ngx_http_perl_module = {
     ngx_http_perl_init_worker,             /* init process */
     NULL,                                  /* init thread */
     NULL,                                  /* exit thread */
-    NULL,                                  /* exit process */
+    ngx_http_perl_exit_worker,             /* exit process */
     ngx_http_perl_exit,                    /* exit master */
     NGX_MODULE_V1_PADDING
 };
@@ -925,6 +934,7 @@ ngx_http_perl_create_main_conf(ngx_conf_t *cf)
     pmcf->modules     = NGX_CONF_UNSET_PTR;
     pmcf->requires    = NGX_CONF_UNSET_PTR;
     pmcf->init_worker = NGX_CONF_UNSET_PTR;
+    pmcf->exit_worker = NGX_CONF_UNSET_PTR;
 
     return pmcf;
 }
@@ -1344,6 +1354,49 @@ ngx_http_perl_init_worker(ngx_cycle_t *cycle)
 
 
     return NGX_OK;
+}
+
+
+static void
+ngx_http_perl_exit_worker(ngx_cycle_t *cycle)
+{
+    ngx_http_perl_main_conf_t  *pmcf;
+
+    pmcf = ngx_http_cycle_get_module_main_conf(cycle, ngx_http_perl_module);
+
+    if (pmcf) {
+        ngx_str_t   *script;
+        ngx_uint_t   i;
+        SV          *cb;
+        dSP;
+
+        if (pmcf->exit_worker == NGX_CONF_UNSET_PTR) {
+            return;
+        }
+
+        script = pmcf->exit_worker->elts;
+
+        for (i = 0; i < pmcf->exit_worker->nelts; i++) {
+
+            cb = sv_2mortal ( 
+                    newSVpvn ((char *) script[i].data, script[i].len)
+                 );
+
+            ENTER;
+            SAVETMPS;
+            
+            PUSHMARK(SP);
+            PUTBACK;
+
+            call_sv(cb, G_VOID|G_DISCARD);
+
+            FREETMPS;
+            LEAVE;
+        }
+    }
+
+
+    return;
 }
 
 
