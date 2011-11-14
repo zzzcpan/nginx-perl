@@ -110,7 +110,7 @@ Nginx - full-featured perl support for nginx
     ... 
 
     perl_inc      /path/to/lib;
-    perl_require  My::App;
+    perl_require  My/App.pm;
 
     http {
         server {
