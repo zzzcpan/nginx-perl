@@ -230,12 +230,19 @@ header_only(r)
 
 void
 uri(r)
+    ALIAS:
+        unparsed_uri = 1
     CODE:
         dXSTARG;
         ngx_http_request_t  *r;
 
         ngx_http_perl_set_request(r);
-        ngx_http_perl_set_targ(r->uri.data, r->uri.len);
+
+        if (ix == 1) {
+            ngx_http_perl_set_targ(r->unparsed_uri.data, r->unparsed_uri.len);
+        } else {
+            ngx_http_perl_set_targ(r->uri.data, r->uri.len);
+        }
 
         ST(0) = TARG;
 
@@ -445,7 +452,6 @@ headers_in(r)
             for ( k = 0 ; k < h[i].key.len ; k++ ) {
                 tmp[k] = toLOWER ( h[i].key.data[k] );
             }
-            tmp[ h[i].key.len ] = 0;
 
             sv_ref = hv_fetch ( hv, tmp, h[i].key.len, 1 );
 
