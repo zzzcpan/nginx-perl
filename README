@@ -6,7 +6,7 @@ SYNOPSIS
         ... 
 
         perl_inc      /path/to/lib;
-        perl_require  My::App;
+        perl_require  My/App.pm;
 
         http {
             server {
@@ -45,7 +45,7 @@ DESCRIPTION
     Currently includes:
 
         - official old perl API;
-        - asynchronous connection (ngx_connector, ngx_reader, ngx_writer);
+        - asynchronous connections (ngx_connector, ngx_reader, ngx_writer);
         - timer (ngx_timer);
         - SSL without cached sessions (ngx_ssl_handshaker);
         - simple resolver (ngx_resolver);
@@ -54,6 +54,38 @@ DESCRIPTION
         - configuration level eval (perl_eval);
         - init_worker handlers (perl_init_worker);
         - client connection takeover for websockets, etc;
+
+RATIONALE
+    Nginx is very popular and stable asynchronous web-server. And reusing as
+    much of its internals as possible gives this project same level of
+    stability nginx has. Maybe not right from the beginning, but it can
+    catch up with a very little effort.
+
+    Internal HTTP parser, dispatcher (locations) and different types of
+    handlers free perl modules from reinventing all that, like most of the
+    perl frameworks do. It's already there, native and extremely fast.
+
+    All of the output filters there as well and everything you do can be
+    gzipped, processed with xslt or through any filter module for nginx.
+    Again, extremely fast.
+
+    Nginx has a pretty decent master-worker model, which allows to do
+    process management right out of the box.
+
+    And probably some other things I can't remember at the moment.
+
+    So, why use any of those perl frameworks if we already have nginx with
+    nice native implementation for almost everything they offer. It just
+    needed a little touch.
+
+    Additionally I wanted to implement my new asynchronous API with proper
+    flow control and clearer parameters. Also, the whole model of not doing
+    any networking IO in perl has been pretty great so far: increadible
+    performance and very clear and easy to understand code. Actually most of
+    those ideas for API have been adopted to avoid complexity, which
+    originates from keeping states and order of execution. I mean makgin
+    some things explicit, that usually aren't. It may resemble CPS, but it's
+    not really CPS.
 
 INSTALLATION
     In this distribution perl module is enabled by default, so just
