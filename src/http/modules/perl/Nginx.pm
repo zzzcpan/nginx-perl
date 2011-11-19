@@ -106,20 +106,35 @@ Nginx - full-featured perl support for nginx
 
 =head1 SYNOPSIS
 
-    # nginx-perl.conf
-    ... 
-
-    perl_inc      /path/to/lib;
-    perl_require  My/App.pm;
+    # ----- nginx-perl.conf ------------------------
 
     http {
+
+        perl_inc      /path/to/lib;
+        perl_inc      /path/to/apps;
+        perl_require  My/App.pm;
+
+        perl_init_worker  My::App::init_worker;
+        perl_exit_worker  My::App::exit_worker;
+
+        perl_eval  '$My::App::SOME_VAR = "foo"';
+
+        ...
+
         server {
             location / {
                 perl_handler  My::App::handler;
-    ...
+        ...
+
+        server {
+            location / {
+                perl_app  app.pl;
+        ...
 
 
-    # package My::App;
+    # ----- My/App.pm ------------------------------
+
+    package My::App;
 
     use Nginx;
 
@@ -138,6 +153,17 @@ Nginx - full-featured perl support for nginx
 
         return NGX_DONE;
     }
+
+
+    # ----- app.pl ---------------------------------
+
+    use Nginx;
+
+    sub {
+        my $r = shift;
+
+        ...
+    };
 
 
 
@@ -187,36 +213,28 @@ So, why use any of those perl frameworks if we already have
 nginx with nice native implementation for almost everything
 they offer. It just needed a little touch.
 
-Additionally I wanted to implement my new asynchronous API
-with proper flow control and clearer parameters. Also, the whole
-model of not doing any networking IO in perl has been pretty
-great so far: increadible performance and very clear and easy
-to understand code. Actually most of those ideas for API have been
-adopted to avoid complexity, which originates from keeping 
-states and order of execution. I mean makgin some things explicit, 
-that usually aren't. It may resemble CPS, but it's not really CPS.
+Additionally I wanted to implement new asynchronous API
+with proper flow control and explicit parameters to avoid
+complexity as much as possible. 
 
 
 =head1 INSTALLATION
 
-In this distribution perl module is enabled by default, 
+In this distribution perl is enabled by default, 
 so just F<./configure> should work.
 
-To build with different perl and SSL support use something like:
+But to build with different perl and SSL support use something like:
 
     % ./configure \
          --with-http_ssl_module \
          --with-perl=/home/you/perl5/perlbrew/perls/perl-5.14.2/bin/perl
     % make
 
-There is a working example in F<hello/>. Should be easy to try things
-out:
+nginx-perl can be installed alongside nginx. It uses 
+capital B<N> for perl modules and F<nginx-perl> for binaries.
+So, it is safe to do:
 
-    % ./objs/nginx-perl -p hello
-
-Also nginx-perl can be installed alongside nginx, it is safe to do:
-
-    % make isntall
+    % make install
 
 
 =head1 CONFIGURATION DIRECTIVES
@@ -252,6 +270,18 @@ Adds a handler to call on worker's start.
 
         perl_init_worker  My::App::init_worker;
         perl_init_worker  My::AnotherApp::init_worker;
+
+
+=item perl_exit_worker  My::App::exit_worker;
+
+Adds a handler to call on worker's exit.
+
+    http {
+        perl_inc          /path/to/lib;
+        perl_require      My/App.pm;
+
+        perl_exit_worker  My::App::exit_worker;
+        perl_exit_worker  My::AnotherApp::exit_worker;
 
 
 =item perl_handler  My::App::handler; 
