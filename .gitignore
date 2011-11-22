@@ -10,3 +10,6 @@ hello/logs/
 example/
 trace.sh
 build.sh
+*.log
+*.pid
+*/logs
