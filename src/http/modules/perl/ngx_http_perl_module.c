@@ -1487,8 +1487,8 @@ ngx_perl_timer_clear(ngx_connection_t *c)
         ngx_del_timer(c->read);
     }
 
-    if (c->read->timer_set) {
-        ngx_del_timer(c->read);
+    if (c->write->timer_set) {
+        ngx_del_timer(c->write);
     }
 
     c->destroyed = 1;
@@ -2235,11 +2235,15 @@ ngx_perl_read(ngx_connection_t *c)
     ngx_perl_connection_t  *plc;
 
     plc = (ngx_perl_connection_t *) c->data;
-   
+ 
     if (c->read->timer_set) {
         ngx_del_timer(c->read);
     }
 
+    if (c->write->timer_set) {
+        ngx_del_timer(c->write);
+    }
+ 
     c->read->handler  = ngx_perl_read_handler;
     c->write->handler = ngx_perl_dummy_handler;
 
@@ -2282,6 +2286,10 @@ ngx_perl_write(ngx_connection_t *c)
     plc = (ngx_perl_connection_t *) c->data;
 
     plc->write_offset = 0;
+
+    if (c->read->timer_set) {
+        ngx_del_timer(c->read);
+    }
 
     if (c->write->timer_set) {
         ngx_del_timer(c->write);
@@ -2346,6 +2354,14 @@ ngx_perl_ssl_handshake(ngx_connection_t *c)
 void
 ngx_perl_noop(ngx_connection_t *c) 
 {
+
+    if (c->read->timer_set) {
+        ngx_del_timer(c->read);
+    }
+
+    if (c->write->timer_set) {
+        ngx_del_timer(c->write);
+    }
 
     c->read->handler  = ngx_perl_dummy_handler;
     c->write->handler = ngx_perl_dummy_handler;
