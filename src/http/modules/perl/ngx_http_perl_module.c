@@ -1778,7 +1778,7 @@ ngx_perl_connection_init(ngx_connection_t *c)
 }
 
 
-void
+ngx_connection_t *
 ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb) 
 {
     in_addr_t               inaddr;
@@ -1943,10 +1943,10 @@ ngx_perl_connector(SV *address, SV *port, SV *timeout, SV *cb)
 
     if (rc == NGX_OK) {
         c->write->handler(c->write);
-        return;
+        return c;
     } 
 
-    return;
+    return c;
 
 FATAL:
 
@@ -1966,7 +1966,7 @@ FATAL:
     SvREFCNT_dec(cb);
     errno = 0;
 
-    return;
+    return NULL;
 }
 
 

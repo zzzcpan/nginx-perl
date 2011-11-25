@@ -1317,11 +1317,21 @@ ngx_timer_clear(timer)
         ngx_perl_timer_clear(c);
 
 
-void
+SV *
 ngx_connector(address, port, timeout, cb)
     PROTOTYPE: $$$&
     CODE:
-        ngx_perl_connector(ST(0), ST(1), ST(2), ST(3));
+        ngx_connection_t  *c;
+
+        c = ngx_perl_connector(ST(0), ST(1), ST(2), ST(3));
+        
+        if (c == NULL) {
+            XSRETURN_UNDEF;
+        }
+
+        RETVAL = newSViv(PTR2IV(c));
+    OUTPUT:
+        RETVAL
 
 
 void
