@@ -1,5 +1,6 @@
 
 
+	- added eg/self-sufficient;
 	- added eg/helloworld;
 	- added Nginx/Util.pm with connection queueing;
 	- added $r->unparsed_uri;
