@@ -47,11 +47,11 @@ sub handler_post {
 
     my $buf = "Hello from $NAME\n";
 
-    $r->send_http_header('text/html; charset=UTF-8');
-
     $r->header_out('Cache-Control',  'no-cache');
     $r->header_out('Pragma',         'no-cache');
     $r->header_out('Content-Length', length($buf));
+
+    $r->send_http_header('text/html; charset=UTF-8');
 
     $r->print($buf)
         unless $r->header_only;
