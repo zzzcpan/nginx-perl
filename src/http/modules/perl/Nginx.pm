@@ -771,7 +771,7 @@ self-sufficient reusable handlers for B<nginx-perl>.
 
 Just remember couple of things: 
 
-1. Use C<$r->location_name> as a prefix:
+1. Use C<< $r->location_name >> as a prefix:
 
     location /foo/ {
         perl_handler My::handler;
@@ -788,7 +788,7 @@ Just remember couple of things:
         ...
     }
 
-2. Use C<$r->variable> to configure handlers and to access per-server 
+2. Use C<< $r->variable >> to configure handlers and to access per-server 
 and per-location variables:
 
     location /foo/ {
@@ -804,7 +804,7 @@ and per-location variables:
         ...
     }
 
-3. Use C<$r->ctx> to exchange arbitrary data between handlers:
+3. Use C<< $r->ctx >> to exchange arbitrary data between handlers:
 
     sub handler {
         ...

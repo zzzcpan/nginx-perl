@@ -585,7 +585,7 @@ TIPS AND TRICKS
 
     Just remember couple of things:
 
-    1. Use "$r-"location_name> as a prefix:
+    1. Use "$r->location_name" as a prefix:
 
         location /foo/ {
             perl_handler My::handler;
@@ -602,7 +602,7 @@ TIPS AND TRICKS
             ...
         }
 
-    2. Use "$r-"variable> to configure handlers and to access per-server and
+    2. Use "$r->variable" to configure handlers and to access per-server and
     per-location variables:
 
         location /foo/ {
@@ -618,7 +618,7 @@ TIPS AND TRICKS
             ...
         }
 
-    3. Use "$r-"ctx> to exchange arbitrary data between handlers:
+    3. Use "$r->ctx" to exchange arbitrary data between handlers:
 
         sub handler {
             ...
