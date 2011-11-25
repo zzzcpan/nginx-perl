@@ -1750,7 +1750,7 @@ ngx_perl_connection_init(ngx_connection_t *c)
 
     if (plc == NULL) {
         ngx_log_error(NGX_LOG_ERR, pool->log, 0,
-                      "ngx_perl_connector: ngx_pcalloc() failed");
+            "ngx_perl_connection_init: ngx_pcalloc() failed");
         ngx_destroy_pool(pool);
         errno = NGX_PERL_ENOMEM;
         return 0;
@@ -1760,7 +1760,7 @@ ngx_perl_connection_init(ngx_connection_t *c)
 
     if (plccln == NULL) {
         ngx_log_error(NGX_LOG_ERR, pool->log, 0,
-                      "ngx_perl_connector: ngx_pool_cleanup_add() failed");
+            "ngx_perl_connection_init: ngx_pool_cleanup_add() failed");
         ngx_destroy_pool(pool);
         errno = NGX_PERL_ENOMEM;
         return 0;
