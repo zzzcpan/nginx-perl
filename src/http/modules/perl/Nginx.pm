@@ -762,7 +762,86 @@ since your connection is going to be closed within http request's
 finalizer. But it shouldn't cuase any problems either way.
 
 
+=head1 TIPS AND TRICKS
 
+=head2 SELF-SUFFICIENT HANDLERS
+
+It's important to know how and actually fairly easy to create 
+self-sufficient reusable handlers for B<nginx-perl>.
+
+Just remember couple of things: 
+
+1. Use C<$r->location_name> as a prefix:
+
+    location /foo/ {
+        perl_handler My::handler;
+    }
+
+    sub handler {
+        ...
+
+        my $prefix =  $r->location_name;
+           $prefix =~ s/\/$//;
+
+        $out = "<a href=$prefix/something > do something </a>";
+        # will result in "<a href=/foo/something > do something </a>"
+        ...
+    }
+
+2. Use C<$r->variable> to configure handlers and to access per-server 
+and per-location variables:
+
+    location /foo/ {
+        set $conf_bar "baz";
+        perl_handler My::handler;
+    }
+
+    sub handler {
+        ...
+
+        my $conf_bar      = $r->variable('conf_bar');
+        my $document_root = $r->variable('document_root');
+        ...
+    }
+
+3. Use C<$r->ctx> to exchange arbitrary data between handlers:
+
+    sub handler {
+        ...
+
+        my $ctx = { foo => 'bar' };
+        $r->ctx($ctx);
+
+        my $ctx = $r->ctx;
+        ...
+    }
+
+4. Use C<perl_eval> to configure your modules directly 
+from F<nginx-perl.conf>:
+
+    http {
+
+        perl_require  MyModule.pm;
+
+        perl_eval  ' $My::CONF{foo} = "bar" ';
+    }
+
+
+    package My;
+
+    our %CONF = ();
+
+    sub handler {
+        ...
+
+        warn $CONF{foo};
+        ...
+    }
+
+
+Check out F<eg/self-sufficient> to see all this in action:
+
+    % ./objs/nginx-perl -p eg/self-sufficient
 
 
 =head1 SEE ALSO
