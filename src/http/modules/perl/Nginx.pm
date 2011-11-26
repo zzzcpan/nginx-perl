@@ -676,6 +676,13 @@ a local resolver, like named that does actual resolving.
         ...
     };
 
+IMPORTANT
+
+This wrapper is a bit too thin and currently lacks additional timer 
+to cancel name resolution on timeout. This is going to be fixed 
+before first official release.
+
+
 =back
 
 

@@ -506,6 +506,12 @@ ASYNCHRONOUS API
                 ...
             };
 
+        IMPORTANT
+
+        This wrapper is a bit too thin and currently lacks additional timer
+        to cancel name resolution on timeout. This is going to be fixed
+        before first official release.
+
 CONNECTION TAKEOVER
     It is possible to takeover client connection completely and create you
     own reader and writer on that connection. You need this for websockets
