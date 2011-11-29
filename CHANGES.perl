@@ -1,5 +1,8 @@
 
 
+	- merging with nginx-1.1.9
+1.1.9.1
+	- added eg/redis;
 	- added eg/self-sufficient;
 	- added eg/helloworld;
 	- added Nginx/Util.pm with connection queueing;
