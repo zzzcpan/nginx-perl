@@ -143,7 +143,7 @@ static ngx_conf_enum_t  ngx_http_core_if_modified_since[] = {
 };
 
 
-static ngx_conf_enum_t  ngx_http_core_keepalive_disable[] = {
+static ngx_conf_bitmask_t  ngx_http_core_keepalive_disable[] = {
     { ngx_string("none"), NGX_HTTP_KEEPALIVE_DISABLE_NONE },
     { ngx_string("msie6"), NGX_HTTP_KEEPALIVE_DISABLE_MSIE6 },
     { ngx_string("safari"), NGX_HTTP_KEEPALIVE_DISABLE_SAFARI },
@@ -513,8 +513,8 @@ static ngx_command_t  ngx_http_core_commands[] = {
       NULL },
 
     { ngx_string("keepalive_disable"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-      ngx_conf_set_enum_slot,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE12,
+      ngx_conf_set_bitmask_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_core_loc_conf_t, keepalive_disable),
       &ngx_http_core_keepalive_disable },
@@ -718,7 +718,7 @@ static ngx_command_t  ngx_http_core_commands[] = {
       NULL },
 
     { ngx_string("resolver"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
       ngx_http_core_resolver,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
@@ -3267,12 +3267,12 @@ ngx_http_core_create_loc_conf(ngx_conf_t *cf)
      *     clcf->auto_redirect = 0;
      *     clcf->alias = 0;
      *     clcf->gzip_proxied = 0;
+     *     clcf->keepalive_disable = 0;
      */
 
     clcf->client_max_body_size = NGX_CONF_UNSET;
     clcf->client_body_buffer_size = NGX_CONF_UNSET_SIZE;
     clcf->client_body_timeout = NGX_CONF_UNSET_MSEC;
-    clcf->keepalive_disable = NGX_CONF_UNSET_UINT;
     clcf->satisfy = NGX_CONF_UNSET_UINT;
     clcf->if_modified_since = NGX_CONF_UNSET_UINT;
     clcf->max_ranges = NGX_CONF_UNSET_UINT;
@@ -3475,9 +3475,11 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_msec_value(conf->client_body_timeout,
                               prev->client_body_timeout, 60000);
 
-    ngx_conf_merge_uint_value(conf->keepalive_disable, prev->keepalive_disable,
-                              NGX_HTTP_KEEPALIVE_DISABLE_MSIE6
-                              |NGX_HTTP_KEEPALIVE_DISABLE_SAFARI);
+    ngx_conf_merge_bitmask_value(conf->keepalive_disable,
+                              prev->keepalive_disable,
+                              (NGX_CONF_BITMASK_SET
+                               |NGX_HTTP_KEEPALIVE_DISABLE_MSIE6
+                               |NGX_HTTP_KEEPALIVE_DISABLE_SAFARI));
     ngx_conf_merge_uint_value(conf->satisfy, prev->satisfy,
                               NGX_HTTP_SATISFY_ALL);
     ngx_conf_merge_uint_value(conf->if_modified_since, prev->if_modified_since,
@@ -3535,7 +3537,7 @@ ngx_http_core_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
              * to inherit it in all servers
              */
 
-            prev->resolver = ngx_resolver_create(cf, NULL);
+            prev->resolver = ngx_resolver_create(cf, NULL, 0);
             if (prev->resolver == NULL) {
                 return NGX_CONF_ERROR;
             }
@@ -4398,7 +4400,7 @@ ngx_http_core_open_file_cache(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         if (ngx_strncmp(value[i].data, "max=", 4) == 0) {
 
             max = ngx_atoi(value[i].data + 4, value[i].len - 4);
-            if (max == NGX_ERROR) {
+            if (max <= 0) {
                 goto failed;
             }
 
@@ -4540,7 +4542,6 @@ ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
     ngx_http_core_loc_conf_t  *clcf = conf;
 
-    ngx_url_t   u;
     ngx_str_t  *value;
 
     if (clcf->resolver) {
@@ -4549,19 +4550,9 @@ ngx_http_core_resolver(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     value = cf->args->elts;
 
-    ngx_memzero(&u, sizeof(ngx_url_t));
-
-    u.host = value[1];
-    u.port = 53;
-
-    if (ngx_inet_resolve_host(cf->pool, &u) != NGX_OK) {
-        ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "%V: %s", &u.host, u.err);
-        return NGX_CONF_ERROR;
-    }
-
-    clcf->resolver = ngx_resolver_create(cf, &u.addrs[0]);
+    clcf->resolver = ngx_resolver_create(cf, &value[1], cf->args->nelts - 1);
     if (clcf->resolver == NULL) {
-        return NGX_OK;
+        return NGX_CONF_ERROR;
     }
 
     return NGX_CONF_OK;

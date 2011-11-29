@@ -1,4 +1,99 @@
 
+Changes with nginx 1.1.9                                         28 Nov 2011
+
+    *) Change: now double quotes are encoded in an "echo" SSI-command
+       output.
+       Thanks to Zaur Abasmirzoev.
+
+    *) Feature: the "valid" parameter of the "resolver" directive. By
+       default TTL returned by a DNS server is used.
+       Thanks to Kirill A. Korinskiy.
+
+    *) Bugfix: nginx might hang after a worker process abnormal termination.
+
+    *) Bugfix: a segmentation fault might occur in a worker process if SNI
+       was used; the bug had appeared in 1.1.2.
+
+    *) Bugfix: in the "keepalive_disable" directive; the bug had appeared in
+       1.1.8.
+       Thanks to Alexander Usov.
+
+    *) Bugfix: SIGWINCH signal did not work after first binary upgrade; the
+       bug had appeared in 1.1.1.
+
+    *) Bugfix: backend responses with length not matching "Content-Length"
+       header line are no longer cached.
+
+    *) Bugfix: in the "scgi_param" directive, if complex parameters were
+       used.
+
+    *) Bugfix: in the "epoll" event method.
+       Thanks to Yichun Zhang.
+
+    *) Bugfix: in the ngx_http_flv_module.
+       Thanks to Piotr Sikora.
+
+    *) Bugfix: in the ngx_http_mp4_module.
+
+    *) Bugfix: IPv6 addresses are now handled properly in a request line and
+       in a "Host" request header line.
+
+    *) Bugfix: "add_header" and "expires" directives did not work if a
+       request was proxied and response status code was 206.
+
+    *) Bugfix: nginx could not be built on FreeBSD 10.
+
+    *) Bugfix: nginx could not be built on AIX.
+
+
+Changes with nginx 1.1.8                                         14 Nov 2011
+
+    *) Change: the ngx_http_limit_zone_module was renamed to the
+       ngx_http_limit_conn_module.
+
+    *) Change: the "limit_zone" directive was superseded by the
+       "limit_conn_zone" directive with a new syntax.
+
+    *) Feature: support for multiple "limit_conn" limits on the same level.
+
+    *) Feature: the "image_filter_sharpen" directive.
+
+    *) Bugfix: a segmentation fault might occur in a worker process if
+       resolver got a big DNS response.
+       Thanks to Ben Hawkes.
+
+    *) Bugfix: in cache key calculation if internal MD5 implementation was
+       used; the bug had appeared in 1.0.4.
+
+    *) Bugfix: the "If-Modified-Since", "If-Range", etc. client request
+       header lines might be passed to backend while caching; or not passed
+       without caching if caching was enabled in another part of the
+       configuration.
+
+    *) Bugfix: the module ngx_http_mp4_module sent incorrect
+       "Content-Length" response header line if the "start" argument was
+       used.
+       Thanks to Piotr Sikora.
+
+
+Changes with nginx 1.1.7                                         31 Oct 2011
+
+    *) Feature: support of several DNS servers in the "resolver" directive.
+       Thanks to Kirill A. Korinskiy.
+
+    *) Bugfix: a segmentation fault occurred on start or during
+       reconfiguration if the "ssl" directive was used at http level and
+       there was no "ssl_certificate" defined.
+
+    *) Bugfix: reduced memory consumption while proxying big files if they
+       were buffered to disk.
+
+    *) Bugfix: a segmentation fault might occur in a worker process if
+       "proxy_http_version 1.1" directive was used.
+
+    *) Bugfix: in the "expires @time" directive.
+
+
 Changes with nginx 1.1.6                                         17 Oct 2011
 
     *) Change in internal API: now module context data are cleared while
