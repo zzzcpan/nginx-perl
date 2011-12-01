@@ -237,6 +237,17 @@ So, it is safe to do:
     % make install
 
 
+=head1 RUNNING EXAMPLES
+
+You don't have to install nginx-perl to try it. There are couple
+of ready to try examples in F<eg/>:
+
+    % ./objs/nginx-perl -p eg/helloworld
+
+Now open another terminal or your web browser and go to
+http://127.0.0.1:55555/ or whatever IP you're on.
+
+
 =head1 CONFIGURATION DIRECTIVES
 
 =over 4

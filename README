@@ -123,6 +123,15 @@ INSTALLATION
 
         % make install
 
+RUNNING EXAMPLES
+    You don't have to install nginx-perl to try it. There are couple of
+    ready to try examples in eg/:
+
+        % ./objs/nginx-perl -p eg/helloworld
+
+    Now open another terminal or your web browser and go to
+    http://127.0.0.1:55555/ or whatever IP you're on.
+
 CONFIGURATION DIRECTIVES
     perl_inc /path/to/lib;
         Works just like Perl's "use lib '/path/to/lib'". Supports only one
