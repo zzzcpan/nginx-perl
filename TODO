@@ -1,10 +1,10 @@
 
 
-	Thing to do before release:
+	Things to do before release:
 
 	- proper LICENSE and COPYRIGHT information;
 
-	- implement dedicated timer for ngx_perl_resolver,
+	- bugfix: implement dedicated timer for ngx_perl_resolver,
 	  just like upstream does;
 
 	- proper tests, probably reuse some code from Maxim's test suite 
@@ -17,4 +17,33 @@
 	- merge with latest nginx release;
 
 	- project page, probably at http://zzzcpan.github.com/nginx-perl/ ;
+
+
+
+
+
+
+
+	Someday or never, just some ideas to consider:
+
+	- perl_server block for arbitrary tcp servers, not just http:
+
+	  perl_server {
+	      listen  55555;
+	      perl_accept  My::accept_handler;
+	  }
+
+	- perl_app as psgi, everything is already there, should
+	  be trivial to implement.
+
+	    https://github.com/miyagawa/psgi-specs
+	      docs;
+
+	    https://github.com/yappo/nginx-psgi-patchs  
+	      doesn't handle request body properly, but nice example
+	      on what psgi wants from the subroutine;
+
+	    https://github.com/yko/ngx_mod_psgi
+	      example on test suite, figure out how to actually run it;
+
 
