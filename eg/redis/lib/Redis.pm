@@ -7,17 +7,13 @@ no  warnings 'uninitialized';
 use Data::Dumper;
 
 use Nginx;
-use Redis::Nginx;
-
-my $redis;
+use Nginx::Redis;
 
 
 sub init_worker {
 
-    $redis = redis_client '127.0.0.1', 6379, 15;
-
-    redis $redis, ['PING'], sub {
-        warn Dumper (@_) . "\n";
+    ngx_redis '127.0.0.1:6379', ['GET', 'mykey'], sub {
+        warn Dumper \@_;
     };
 }
 
@@ -26,7 +22,6 @@ sub handler {
     my ($r) = @_;
 
     $r->main_count_inc; 
-
 
     $r->send_http_header('text/html; charset=UTF-8');
 
@@ -47,7 +42,7 @@ sub handler_single {
     $r->main_count_inc; 
 
 
-    redis $redis, ['GET', 'mykey'], sub {
+    ngx_redis '127.0.0.1', ['GET', 'mykey'], sub {
         my @reply = @_;
 
         my $buf = $reply [0]->[1] . "\n";
@@ -76,7 +71,7 @@ sub handler_multi {
 
     for (1 .. $cnt) {
 
-        redis $redis, ['GET', 'mykey'], sub {
+        ngx_redis '127.0.0.1', ['GET', 'mykey'], sub {
             my @reply = @_;
 
             if (--$cnt == 0) {
