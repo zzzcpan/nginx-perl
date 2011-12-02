@@ -217,7 +217,12 @@ Nginx::Redis - asynchronous redis client for nginx-perl
 
     ngx_redis '127.0.0.1:6379', ['GET', 'mykey'], sub {
         my ($reply) = @_;
-        
+ 
+        unless ($reply) {
+            warn "error: no reply from redis\n";
+            return;
+        }
+
         # $reply = ['$', 'myvalue']
     };
 
