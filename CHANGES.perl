@@ -1,6 +1,9 @@
 
 
-	- merging with nginx-1.1.9
+	- fix: uninitialized buffer for reader caused segfault,
+	  thanks to chenryn for helping to spot it;
+	- Nginx::Redis as a reusable redis client;
+	- merging with nginx-1.1.9;
 1.1.9.1
 	- added eg/redis;
 	- added eg/self-sufficient;
