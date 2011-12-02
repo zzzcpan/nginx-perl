@@ -248,6 +248,34 @@ Now open another terminal or your web browser and go to
 http://127.0.0.1:55555/ or whatever IP you're on.
 
 
+=head1 BENCHMARKING
+
+The easiest way to benchmark nginx-perl against node.js is to run
+redis example from F<eg/redis>, F<eg/redis.js> and compare the results. 
+But first you need to install L<Redis::Parser::XS> from cpan:
+
+    % cpan Redis::Parser::XS
+    ...
+    % ./objs/nginx-perl -p eg/redis
+    ...
+
+    % ab -c10 -n10000 http://127.0.0.1:55555/
+    % ab -c10 -n10000 http://127.0.0.1:55555/single
+    % ab -c10 -n10000 http://127.0.0.1:55555/multi
+
+Same goes for node.js:
+
+    % npm install redis
+    % npm install hiredis
+    ...
+    % node eg/redis.js
+    ...
+
+    % ab -c10 -n10000 http://127.0.0.1:55555/
+    % ab -c10 -n10000 http://127.0.0.1:55555/single
+    % ab -c10 -n10000 http://127.0.0.1:55555/multi
+
+
 =head1 CONFIGURATION DIRECTIVES
 
 =over 4
