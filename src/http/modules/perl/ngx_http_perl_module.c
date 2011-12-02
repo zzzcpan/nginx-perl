@@ -2536,7 +2536,10 @@ AGAIN:
 
     sv = plc->read_buffer;
 
-    SvPOK_on(sv);
+    if (SvTYPE (sv) != SVt_PV) {
+        SvUPGRADE (sv, SVt_PV);
+        SvPOK_on (sv);
+    }
     
     for ( ;; ) {
 
