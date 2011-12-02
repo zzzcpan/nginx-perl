@@ -148,7 +148,7 @@ Nginx - full-featured perl support for nginx
             $r->print("OK\n");
 
             $r->send_special(NGX_HTTP_LAST);
-            $r->finilize_request(NGX_OK);
+            $r->finalize_request(NGX_OK);
         };
 
         return NGX_DONE;
@@ -415,7 +415,7 @@ Here's how to send response completely asynchronously:
             $r->print("OK\n");
 
             $r->send_special(NGX_HTTP_LAST);
-            $r->finilize_request(NGX_OK);
+            $r->finalize_request(NGX_OK);
         };
 
         return NGX_DONE;

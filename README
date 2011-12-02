@@ -44,7 +44,7 @@ SYNOPSIS
                 $r->print("OK\n");
 
                 $r->send_special(NGX_HTTP_LAST);
-                $r->finilize_request(NGX_OK);
+                $r->finalize_request(NGX_OK);
             };
 
             return NGX_DONE;
@@ -261,7 +261,7 @@ HTTP CONTENT HANDLER
                 $r->print("OK\n");
 
                 $r->send_special(NGX_HTTP_LAST);
-                $r->finilize_request(NGX_OK);
+                $r->finalize_request(NGX_OK);
             };
 
             return NGX_DONE;
