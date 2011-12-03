@@ -698,6 +698,7 @@ TIPS AND TRICKS
         % ./objs/nginx-perl -p eg/self-sufficient
 
 SEE ALSO
+    Original embedded perl <http://wiki.nginx.org/EmbeddedPerlModule>
     Nginx::Util,
 
     <http://nginx.net/>, <http://sysoev.ru/nginx/>,

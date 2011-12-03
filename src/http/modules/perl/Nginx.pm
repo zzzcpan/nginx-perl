@@ -892,6 +892,7 @@ Check out F<eg/self-sufficient> to see all this in action:
 
 =head1 SEE ALSO
 
+Original embedded perl L<http://wiki.nginx.org/EmbeddedPerlModule>
 L<Nginx::Util>,
 
 L<http://nginx.net/>, 
