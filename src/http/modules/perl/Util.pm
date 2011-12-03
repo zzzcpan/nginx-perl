@@ -45,30 +45,32 @@ sub ngx_pure_http_req ($$\$\$$&) {
     ngx_connector $ip, $port, $timeout, sub {
 
         &$cb(), 
-        return NGX_CLOSE  
-            if $!;
+          return NGX_CLOSE  
+                if $!;
 
         my $c = shift;
+
 
         ngx_writer $c, $$req_ref, $timeout, sub {
 
             &$cb(), 
-            return NGX_CLOSE  
-                if $!;
+              return NGX_CLOSE  
+                    if $!;
 
             $$resp_ref = '';
 
             return NGX_READ;
         };
 
+
         ngx_reader $c, $$resp_ref, 0, 4000, $timeout, sub {
 
             &$cb(), 
-            return NGX_CLOSE  
-                if $!;
+              return NGX_CLOSE  
+                    if  $!;
             
             return NGX_READ 
-                if $$resp_ref !~ / \x0d?\x0a \x0d?\x0a /x;
+                    if  $$resp_ref !~ / \x0d?\x0a \x0d?\x0a /x;
 
             my %h;
 
@@ -96,19 +98,22 @@ sub ngx_pure_http_req ($$\$\$$&) {
                $len = $RESPONSE_LIMIT  if $len > $RESPONSE_LIMIT;
 
             &$cb(\%h),
-            return NGX_CLOSE
-                if $len && length($$resp_ref) == $len;
+              return NGX_CLOSE
+                    if  $len && length($$resp_ref) == $len;
+
 
             ngx_reader $c, $$resp_ref, $len, $len, $timeout, sub {
 
                 return NGX_READ
-                    if !$len && !$! && length($$resp_ref) < $RESPONSE_LIMIT;
+                        if  !$len  && 
+                            !$!    && 
+                            length($$resp_ref) < $RESPONSE_LIMIT;
 
-                $! = 0
-                    if $! == NGX_EOF && !$len;
+                $! = 0  
+                      if  $! == NGX_EOF && !$len;
 
                 &$cb(\%h),
-                return NGX_CLOSE;
+                  return NGX_CLOSE;
             };
 
             return NGX_READ;
