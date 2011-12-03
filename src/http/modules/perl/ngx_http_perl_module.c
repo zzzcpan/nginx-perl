@@ -1157,7 +1157,7 @@ ngx_http_perl_app(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     plcf->handler = value[1];
 
-    sv = newSVpvf("do '%s'", (char *) value[1].data);
+    sv = newSVpvf("require '%s'", (char *) value[1].data);
 
     plcf->sub = eval_pv(SvPVX(sv), 1);
 
