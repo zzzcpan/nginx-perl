@@ -2,62 +2,60 @@ NAME
     Nginx - full-featured perl support for nginx
 
 SYNOPSIS
-        # ----- nginx-perl.conf ------------------------
+    nginx-perl.conf:
 
         http {
-
+        
             perl_inc      /path/to/lib;
             perl_inc      /path/to/apps;
             perl_require  My/App.pm;
-
+        
             perl_init_worker  My::App::init_worker;
             perl_exit_worker  My::App::exit_worker;
-
+        
             perl_eval  '$My::App::SOME_VAR = "foo"';
-
+        
             ...
-
+        
             server {
                 location / {
                     perl_handler  My::App::handler;
             ...
-
+        
             server {
                 location / {
                     perl_app  app.pl;
             ...
 
-
-        # ----- My/App.pm ------------------------------
+    My/App.pm:
 
         package My::App;
-
+    
         use Nginx;
-
+    
         sub handler {
             my $r = shift;
-
+        
             $r->main_count_inc;
-
+        
             ngx_timer 1, 0, sub {
                 $r->send_http_header('text/html');
                 $r->print("OK\n");
-
+            
                 $r->send_special(NGX_HTTP_LAST);
                 $r->finalize_request(NGX_OK);
             };
-
+        
             return NGX_DONE;
         }
 
-
-        # ----- app.pl ---------------------------------
+    app.pl:
 
         use Nginx;
-
+    
         sub {
             my $r = shift;
-
+        
             ...
         };
 
@@ -180,7 +178,7 @@ CONFIGURATION DIRECTIVES
             http {
                 perl_inc          /path/to/lib;
                 perl_require      My/App.pm;
-
+        
                 perl_init_worker  My::App::init_worker;
                 perl_init_worker  My::AnotherApp::init_worker;
 
@@ -190,7 +188,7 @@ CONFIGURATION DIRECTIVES
             http {
                 perl_inc          /path/to/lib;
                 perl_require      My/App.pm;
-
+        
                 perl_exit_worker  My::App::exit_worker;
                 perl_exit_worker  My::AnotherApp::exit_worker;
 
@@ -279,17 +277,17 @@ HTTP CONTENT HANDLER
 
         sub handler {
             my $r = shift;
-
+        
             $r->main_count_inc;
-
+        
             ngx_timer 1, 0, sub {
                 $r->send_http_header('text/html');
                 $r->print("OK\n");
-
+            
                 $r->send_special(NGX_HTTP_LAST);
                 $r->finalize_request(NGX_OK);
             };
-
+        
             return NGX_DONE;
         }
 
@@ -298,7 +296,6 @@ HTTP CONTENT HANDLER
 
 HTTP ACCESS HANDLER
     todo
-
 
 FLOW CONTROL
     To specify what to do after each callback we can either call some
@@ -324,7 +321,7 @@ FLOW CONTROL
     control via single "return" for this:
 
         ngx_connector '1.2.3.4', 80, 15, sub {
-
+        
             return NGX_CLOSE;
         };
 
@@ -332,13 +329,13 @@ FLOW CONTROL
     create reader and "return NGX_READ" from connector's callback:
 
         ngx_connector '1.2.3.4', 80, 15, sub {
-
+        
             my $c = shift;
-
+        
             ngx_reader $c, $buf, 10, 10, 15, sub {
                 ... 
             };
-
+        
             return NGX_READ;
         };
 
@@ -347,7 +344,7 @@ FLOW CONTROL
         ngx_reader $c, $buf, 10, 10, 15, sub {
             ... 
         };
-
+    
         ngx_read($c);
 
 ERROR HANDLING
@@ -358,10 +355,10 @@ ERROR HANDLING
     Example:
 
         ngx_reader $c, $buf, 0, 0, sub {
-
+        
             return NGX_WRITE
                 if $! == NGX_EOF;
-
+        
             return NGX_CLOSE
                 if $!;
             ...
@@ -386,7 +383,7 @@ ASYNCHRONOUS API
         and destroys itself:
 
             my $repeat = 5;
-
+    
             ngx_timer $repeat, $repeat, sub {
                 $repeat--;
             };
@@ -407,13 +404,13 @@ ASYNCHRONOUS API
         Example:
 
             ngx_connector $ip, 80, 15, sub {
-
+        
                 return NGX_CLOSE
                     if $!;
-
+        
                 my $c = shift;
                 ...
-
+        
                 return NGX_READ;
             };
 
@@ -437,13 +434,13 @@ ASYNCHRONOUS API
         case of EOF.
 
             my $buf;
-
+    
             ngx_reader $c, $buf, $min, $max, $timeout, sub {
         
                 return NGX_CLOSE
                     if $! && $! != NGX_EOF;
                 ...
-
+        
                 return NGX_WRITE;
             };
 
@@ -468,13 +465,13 @@ ASYNCHRONOUS API
         Example:
 
             my $buf = "GET /\n";
-
+    
             ngx_writer $c, $buf, 15, sub {
-
+        
                 return NGX_CLOSE
                     if $!;
                 ...
-
+        
                 return NGX_READ;
             };
 
@@ -498,25 +495,25 @@ ASYNCHRONOUS API
         Typically it should be called inside connector's callback:
 
             ngx_connector ... sub {
-
+        
                 return NGX_CLOSE 
                     if $!;
-
+        
                 my $c = shift;
-
+        
                 ngx_ssl_handshaker $c, sub {
             
                     return NGX_CLOSE
                         if $!;
                     ...
-
+            
                     ngx_writer ... sub { };
-
+            
                     ngx_reader ... sub { };
-
+            
                     return NGX_WRITE;
                 };
-
+        
                 return NGX_SSL_HANDSHAKE;
             };
 
@@ -535,9 +532,9 @@ ASYNCHRONOUS API
             ngx_resolver $host, $timeout, sub {
                 retrun
                     if $!;
-
+        
                 warn join(', ', @_)."\n";
-
+        
                 ...
             };
 
@@ -570,40 +567,40 @@ CONNECTION TAKEOVER
 
         sub handler {
             my $r = shift;
-
+        
             my $c = $r->take_connection()
                 or return HTTP_SERVER_ERROR;
-
+            
             $r->main_count_inc;
-
+            
                 my $buf;
-
+            
                 ngx_reader $c, $buf, ... , sub {
-
+                
                     if ($!) {
                         $r->give_connection;
                         $r->finalize_request(NGX_DONE);
-
+                    
                         return NGX_NOOP;
                     }
-
+                
                     ...
                 };
-
+            
                 ngx_writer $c, ... , sub {
-
+                
                     if ($!) {
                         $r->give_connection;
                         $r->finalize_request(NGX_DONE);
-
+                    
                         return NGX_NOOP;
                     }
-
+                
                     ...
                 };
-
+            
                 ngx_read($c);
-
+        
             return NGX_DONE;
         }
 
@@ -612,7 +609,7 @@ CONNECTION TAKEOVER
 
         $r->give_connection;
         $r->finalize_request(NGX_DONE);
-
+    
         return NGX_NOOP;
 
     Usually you will also need to return NGX_NOOP instead of NGX_CLOSE,
@@ -634,10 +631,10 @@ TIPS AND TRICKS
 
         sub handler {
             ...
-
+        
             my $prefix =  $r->location_name;
                $prefix =~ s/\/$//;
-
+        
             $out = "<a href=$prefix/something > do something </a>";
             # will result in "<a href=/foo/something > do something </a>"
             ...
@@ -653,7 +650,7 @@ TIPS AND TRICKS
 
         sub handler {
             ...
-
+        
             my $conf_bar      = $r->variable('conf_bar');
             my $document_root = $r->variable('document_root');
             ...
@@ -663,10 +660,10 @@ TIPS AND TRICKS
 
         sub handler {
             ...
-
+        
             my $ctx = { foo => 'bar' };
             $r->ctx($ctx);
-
+        
             my $ctx = $r->ctx;
             ...
         }
@@ -675,20 +672,20 @@ TIPS AND TRICKS
     nginx-perl.conf:
 
         http {
-
+        
             perl_require  MyModule.pm;
-
+        
             perl_eval  ' $My::CONF{foo} = "bar" ';
         }
 
 
         package My;
-
+    
         our %CONF = ();
-
+    
         sub handler {
             ...
-
+        
             warn $CONF{foo};
             ...
         }
@@ -698,11 +695,8 @@ TIPS AND TRICKS
         % ./objs/nginx-perl -p eg/self-sufficient
 
 SEE ALSO
-    Original embedded perl <http://wiki.nginx.org/EmbeddedPerlModule>
-    Nginx::Util,
-
-    <http://nginx.net/>, <http://sysoev.ru/nginx/>,
-    <http://sysoev.ru/nginx/docs/http/ngx_http_perl_module.html>
+    Nginx::Util, <http://wiki.nginx.org/EmbeddedPerlModule>,
+    <http://nginx.net/>
 
 AUTHOR
     Igor Sysoev, Alexandr Gomoliako <zzz@zzz.org.ua>
