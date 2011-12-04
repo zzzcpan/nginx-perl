@@ -176,29 +176,28 @@ Nginx::Util - utility functions
 =head1 SYNOPSIS
 
     use Nginx::Util;
-
+    
     my $wbuf = '';
     my $rbuf = "GET /shouldnotbethere HTTP/1.0\x0d\x0a".
                "Host: www.google.com\x0d\x0a".
                "Connection: close\x0d\x0a".
                "\x0d\x0a";
-
+    
     ngx_http_req '209.85.148.104', 80, $rbuf, $wbuf, 5, sub {
         my $http_headers = shift;
-
+        
         if ($! && $! != NGX_EOF) {
             ...
         }
-
+        
         if ($http_headers->{'_status'} ... ) {
             ...
         }
-
+        
         if ($http_headers->{'content-type'}->[0] ... ) {
             ...
         }
     };
-
 
 =head1 DESCRIPTION
 
@@ -235,14 +234,13 @@ Example:
               "Host: www.google.com\x0d\x0a".
               "Connection: close\x0d\x0a".
               "\x0d\x0a";
-
+    
     ngx_http_req '209.85.148.104', 80, $buf, $buf, 15, sub {
         my $h    = shift;
         my $dump = Dumper($h);
-
+        
         warn "$!\n$dump\n$buf\n\n\n";
     };
-
 
 =item ngx_pure_http_req $ip, $port, $reqbuf, $respbuf, $timeout, sub { };
 
