@@ -102,70 +102,66 @@ __END__
 
 =head1 NAME
 
-Nginx - full-featured perl support for nginx
+nginx-perl - full-featured perl support for nginx
 
 =head1 SYNOPSIS
 
-    # ----- nginx-perl.conf ------------------------
+F<nginx-perl.conf>:
 
     http {
-
+        
         perl_inc      /path/to/lib;
         perl_inc      /path/to/apps;
         perl_require  My/App.pm;
-
+        
         perl_init_worker  My::App::init_worker;
         perl_exit_worker  My::App::exit_worker;
-
+        
         perl_eval  '$My::App::SOME_VAR = "foo"';
-
+        
         ...
-
+        
         server {
             location / {
                 perl_handler  My::App::handler;
         ...
-
+        
         server {
             location / {
                 perl_app  app.pl;
         ...
 
-
-    # ----- My/App.pm ------------------------------
+F<My/App.pm>:
 
     package My::App;
-
+    
     use Nginx;
-
+    
     sub handler {
         my $r = shift;
-
+        
         $r->main_count_inc;
-
+        
         ngx_timer 1, 0, sub {
             $r->send_http_header('text/html');
             $r->print("OK\n");
-
+            
             $r->send_special(NGX_HTTP_LAST);
             $r->finalize_request(NGX_OK);
         };
-
+        
         return NGX_DONE;
     }
 
-
-    # ----- app.pl ---------------------------------
+F<app.pl>:
 
     use Nginx;
-
+    
     sub {
         my $r = shift;
-
+        
         ...
     };
-
-
 
 =head1 DESCRIPTION
 
@@ -186,7 +182,6 @@ Currently includes:
     - configuration level eval (perl_eval);
     - init_worker handlers (perl_init_worker);
     - client connection takeover for websockets, etc;
-
 
 =head1 RATIONALE
 
@@ -217,7 +212,6 @@ Additionally I wanted to implement new asynchronous API
 with proper flow control and explicit parameters to avoid
 complexity as much as possible. 
 
-
 =head1 INSTALLATION
 
 In this distribution perl is enabled by default, 
@@ -236,7 +230,6 @@ So, it is safe to do:
 
     % make install
 
-
 =head1 RUNNING EXAMPLES
 
 You don't have to install nginx-perl to try it. There are couple
@@ -246,7 +239,6 @@ of ready to try examples in F<eg/>:
 
 Now open another terminal or your web browser and go to
 http://127.0.0.1:55555/ or whatever IP you're on.
-
 
 =head1 BENCHMARKING
 
@@ -275,7 +267,6 @@ Same goes for node.js:
     % ab -c10 -n10000 http://127.0.0.1:55555/single
     % ab -c10 -n10000 http://127.0.0.1:55555/multi
 
-
 =head1 CONFIGURATION DIRECTIVES
 
 =over 4
@@ -298,7 +289,6 @@ Same as Perl's own C<require>.
         perl_inc      /path/to/lib;
         perl_require  My/App.pm;
 
-
 =item perl_init_worker  My::App::init_worker;
 
 Adds a handler to call on worker's start.
@@ -306,10 +296,9 @@ Adds a handler to call on worker's start.
     http {
         perl_inc          /path/to/lib;
         perl_require      My/App.pm;
-
+        
         perl_init_worker  My::App::init_worker;
         perl_init_worker  My::AnotherApp::init_worker;
-
 
 =item perl_exit_worker  My::App::exit_worker;
 
@@ -318,10 +307,9 @@ Adds a handler to call on worker's exit.
     http {
         perl_inc          /path/to/lib;
         perl_require      My/App.pm;
-
+        
         perl_exit_worker  My::App::exit_worker;
         perl_exit_worker  My::AnotherApp::exit_worker;
-
 
 =item perl_handler  My::App::handler; 
 
@@ -343,7 +331,6 @@ Adds an http access handler to the access phase of current location.
                 perl_access My::App::access_handler; 
                 perl_handler My::App::Handler;
 
-
 =item perl_eval  '$My::App::CONF{foo} = "bar"';
 
 Evaluates some perl code on configuration level. Useful if you 
@@ -351,7 +338,6 @@ need to configure some perl modules directly fron F<nginx-perl.conf>.
 
     http {
         perl_eval  '$My::App::CONF{foo} = "bar"';
-
 
 =item perl_app  /path/to/app.pl;
 
@@ -366,9 +352,7 @@ Which means there is no need to call $r->has_request_body there.
             location / {
                 perl_app  /path/to/app.pl;
 
-
 =back
-
 
 =head1 NAMING
 
@@ -382,7 +366,6 @@ Each asynchronous function has an B<r> at the end of its name. This is
 because those functions are creators of handlers with some parameters. 
 E.g. ngx_writer creates write handler for some connection with some
 scalar as a buffer.
-
 
 =head1 HTTP REQUEST OBJECT
 
@@ -435,17 +418,17 @@ Here's how to send response completely asynchronously:
 
     sub handler {
         my $r = shift;
-
+        
         $r->main_count_inc;
-
+        
         ngx_timer 1, 0, sub {
             $r->send_http_header('text/html');
             $r->print("OK\n");
-
+            
             $r->send_special(NGX_HTTP_LAST);
             $r->finalize_request(NGX_OK);
         };
-
+        
         return NGX_DONE;
     }
 
@@ -455,9 +438,6 @@ because it allows to avoid post processing response the old way.
 =head1 HTTP ACCESS HANDLER
 
 todo
-
-=head1 
-
 
 =head1 FLOW CONTROL
 
@@ -484,7 +464,7 @@ As an example, let's connect and close connection. We will do flow control
 via single C<return> for this:
 
     ngx_connector '1.2.3.4', 80, 15, sub {
-
+        
         return NGX_CLOSE;
     };
 
@@ -492,13 +472,13 @@ Now, if we want to connect and then read exactly 10 bytes we need
 to create reader and C<return NGX_READ> from connector's callback:
 
     ngx_connector '1.2.3.4', 80, 15, sub {
-
+        
         my $c = shift;
-
+        
         ngx_reader $c, $buf, 10, 10, 15, sub {
             ... 
         };
-
+        
         return NGX_READ;
     };
 
@@ -507,7 +487,7 @@ This will be different, if we already have connection somehow:
     ngx_reader $c, $buf, 10, 10, 15, sub {
         ... 
     };
-
+    
     ngx_read($c);
 
 
@@ -521,10 +501,10 @@ to NGX_EOF in such case.
 Example:
 
     ngx_reader $c, $buf, 0, 0, sub {
-
+        
         return NGX_WRITE
             if $! == NGX_EOF;
-
+        
         return NGX_CLOSE
             if $!;
         ...
@@ -549,12 +529,11 @@ Simple example calls back just once after 1 second:
         warn "tada\n";
     };
 
-
 This one is a bit trickier, calls back after 5, 4, 3, 2, 1 seconds 
 and destroys itself:
 
     my $repeat = 5;
-
+    
     ngx_timer $repeat, $repeat, sub {
         $repeat--;
     };
@@ -576,16 +555,15 @@ Expects one of the following control flow constants as a result of callback:
 Example:
 
     ngx_connector $ip, 80, 15, sub {
-
+        
         return NGX_CLOSE
             if $!;
-
+        
         my $c = shift;
         ...
-
+        
         return NGX_READ;
     };
-
 
 =item ngx_reader $connection, $buf, $min, $max, $timeout, sub { };
 
@@ -608,13 +586,13 @@ On error calls back with C<$!> set to some value, including
 NGX_EOF in case of EOF. 
 
     my $buf;
-
+    
     ngx_reader $c, $buf, $min, $max, $timeout, sub {
         
         return NGX_CLOSE
             if $! && $! != NGX_EOF;
         ...
-
+        
         return NGX_WRITE;
     };
 
@@ -640,13 +618,13 @@ treated as fatal error here.
 Example:
 
     my $buf = "GET /\n";
-
+    
     ngx_writer $c, $buf, 15, sub {
-
+        
         return NGX_CLOSE
             if $!;
         ...
-
+        
         return NGX_READ;
     };
 
@@ -670,25 +648,25 @@ reader and writer, so you have to create new ones.
 Typically it should be called inside connector's callback:
 
     ngx_connector ... sub {
-
+        
         return NGX_CLOSE 
             if $!;
-
+        
         my $c = shift;
-
+        
         ngx_ssl_handshaker $c, sub {
             
             return NGX_CLOSE
                 if $!;
             ...
-
+            
             ngx_writer ... sub { };
-
+            
             ngx_reader ... sub { };
-
+            
             return NGX_WRITE;
         };
-
+        
         return NGX_SSL_HANDSHAKE;
     };
 
@@ -709,9 +687,9 @@ a local resolver, like named that does actual resolving.
     ngx_resolver $host, $timeout, sub {
         retrun
             if $!;
-
+        
         warn join(', ', @_)."\n";
-
+        
         ...
     };
 
@@ -721,10 +699,7 @@ This wrapper is a bit too thin and currently lacks additional timer
 to cancel name resolution on timeout. This is going to be fixed 
 before first official release.
 
-
 =back
-
-
 
 =head1 CONNECTION TAKEOVER
 
@@ -757,56 +732,54 @@ from your HTTP handler:
 
     sub handler {
         my $r = shift;
-
+        
         my $c = $r->take_connection()
             or return HTTP_SERVER_ERROR;
-
+            
         $r->main_count_inc;
-
+            
             my $buf;
-
+            
             ngx_reader $c, $buf, ... , sub {
-
+                
                 if ($!) {
                     $r->give_connection;
                     $r->finalize_request(NGX_DONE);
-
+                    
                     return NGX_NOOP;
                 }
-
+                
                 ...
             };
-
+            
             ngx_writer $c, ... , sub {
-
+                
                 if ($!) {
                     $r->give_connection;
                     $r->finalize_request(NGX_DONE);
-
+                    
                     return NGX_NOOP;
                 }
-
+                
                 ...
             };
-
+            
             ngx_read($c);
-
+        
         return NGX_DONE;
     }
-
 
 Once you are done with the connection or connection failed with some error
 you MUST give connection back to the request and finalize it:
 
     $r->give_connection;
     $r->finalize_request(NGX_DONE);
-
+    
     return NGX_NOOP;
 
 Usually you will also need to return NGX_NOOP instead of NGX_CLOSE,
 since your connection is going to be closed within http request's
 finalizer. But it shouldn't cuase any problems either way.
-
 
 =head1 TIPS AND TRICKS
 
@@ -825,10 +798,10 @@ Just remember couple of things:
 
     sub handler {
         ...
-
+        
         my $prefix =  $r->location_name;
            $prefix =~ s/\/$//;
-
+        
         $out = "<a href=$prefix/something > do something </a>";
         # will result in "<a href=/foo/something > do something </a>"
         ...
@@ -844,7 +817,7 @@ and per-location variables:
 
     sub handler {
         ...
-
+        
         my $conf_bar      = $r->variable('conf_bar');
         my $document_root = $r->variable('document_root');
         ...
@@ -854,10 +827,10 @@ and per-location variables:
 
     sub handler {
         ...
-
+        
         my $ctx = { foo => 'bar' };
         $r->ctx($ctx);
-
+        
         my $ctx = $r->ctx;
         ...
     }
@@ -866,38 +839,33 @@ and per-location variables:
 from F<nginx-perl.conf>:
 
     http {
-
+        
         perl_require  MyModule.pm;
-
+        
         perl_eval  ' $My::CONF{foo} = "bar" ';
     }
 
 
     package My;
-
+    
     our %CONF = ();
-
+    
     sub handler {
         ...
-
+        
         warn $CONF{foo};
         ...
     }
-
 
 Check out F<eg/self-sufficient> to see all this in action:
 
     % ./objs/nginx-perl -p eg/self-sufficient
 
-
 =head1 SEE ALSO
 
-Original embedded perl L<http://wiki.nginx.org/EmbeddedPerlModule>
 L<Nginx::Util>,
-
-L<http://nginx.net/>, 
-L<http://sysoev.ru/nginx/>,
-L<http://sysoev.ru/nginx/docs/http/ngx_http_perl_module.html>
+L<http://wiki.nginx.org/EmbeddedPerlModule>,
+L<http://nginx.net/> 
 
 =head1 AUTHOR
 
