@@ -102,7 +102,7 @@ __END__
 
 =head1 NAME
 
-nginx-perl - full-featured perl support for nginx
+Nginx - full-featured perl support for nginx
 
 =head1 SYNOPSIS
 
