@@ -213,19 +213,18 @@ Nginx::Redis - asynchronous redis client for nginx-perl
 =head1 SYNOPSIS
 
     use Nginx::Redis;
-
-
+    
+    
     ngx_redis '127.0.0.1:6379', ['GET', 'mykey'], sub {
         my ($reply) = @_;
- 
+        
         unless ($reply) {
             warn "error: no reply from redis\n";
             return;
         }
-
+        
         # $reply = ['$', 'myvalue']
     };
-
 
 =head1 DESCRIPTION
 
@@ -264,10 +263,9 @@ Example:
 
     ngx_redis '127.0.0.1', ['PING'], sub {
         my ($reply) = @_;
-        
+                
         # $reply = ['+', 'PONG']
     };
-
 
 =back
 
