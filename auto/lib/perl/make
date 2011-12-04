@@ -20,7 +20,8 @@ $NGX_OBJS/src/http/modules/perl/blib/arch/auto/Nginx/Nginx.so:		\
 $NGX_OBJS/src/http/modules/perl/Makefile:				\
 		src/http/modules/perl/Makefile.PL			\
 		src/http/modules/perl/Nginx.pm				\
-		src/http/modules/perl/Util.pm
+		src/http/modules/perl/Util.pm				\
+		src/http/modules/perl/Redis.pm
 	cp -p src/http/modules/perl/Nginx.xs $NGX_OBJS/src/http/modules/perl/
 	cp -p src/http/modules/perl/*.pm $NGX_OBJS/src/http/modules/perl/
 	cp -p src/http/modules/perl/typemap $NGX_OBJS/src/http/modules/perl/
