@@ -29,17 +29,4 @@
 	      perl_accept  My::accept_handler;
 	  }
 
-	- perl_app as psgi, everything is already there, should
-	  be trivial to implement.
-
-	    https://github.com/miyagawa/psgi-specs
-	      docs;
-
-	    https://github.com/yappo/nginx-psgi-patchs  
-	      doesn't handle request body properly, but nice example
-	      on what psgi wants from the subroutine;
-
-	    https://github.com/yko/ngx_mod_psgi
-	      example on test suite, figure out how to actually run it;
-
 
