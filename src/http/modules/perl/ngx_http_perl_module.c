@@ -1,6 +1,6 @@
 
 /*
- * Copyright (C) Igor Sysoev
+ * Copyright (C) Igor Sysoev, Alexandr Gomoliako
  */
 
 

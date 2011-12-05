@@ -1,5 +1,5 @@
 
-# Copyright (C) Igor Sysoev
+# Copyright (C) Igor Sysoev, Alexandr Gomoliako
 
 
 cat << END                                                    >> $NGX_MAKEFILE

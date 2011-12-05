@@ -2,8 +2,6 @@
 
 	Things to do before release:
 
-	- proper LICENSE and COPYRIGHT information;
-
 	- bugfix: implement dedicated timer for ngx_perl_resolver,
 	  just like upstream does;
 
