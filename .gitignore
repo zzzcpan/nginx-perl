@@ -14,3 +14,4 @@ build.sh
 *.pid
 */logs
 *.orig
+*.tmp
