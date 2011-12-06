@@ -214,7 +214,6 @@ Nginx::Redis - asynchronous redis client for nginx-perl
 
     use Nginx::Redis;
     
-    
     ngx_redis '127.0.0.1:6379', ['GET', 'mykey'], sub {
         my ($reply) = @_;
         
