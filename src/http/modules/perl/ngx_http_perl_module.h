@@ -139,8 +139,9 @@ void ngx_perl_ssl_handshake(ngx_connection_t *c);
 
 
 typedef struct {
-    ngx_str_t   name;
-    SV         *cb;
+    ngx_str_t     name;
+    SV           *cb;
+    ngx_event_t  *ev;
 } ngx_perl_resolver_t;
 
 void ngx_perl_resolver(SV *name, SV *timeout, SV *cb);

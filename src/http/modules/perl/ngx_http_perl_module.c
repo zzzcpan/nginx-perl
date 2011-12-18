@@ -75,6 +75,7 @@ static void ngx_perl_connect_handler(ngx_event_t *ev);
 static void ngx_perl_dummy_handler(ngx_event_t *ev);
 static void ngx_perl_read_handler(ngx_event_t *ev);
 static void ngx_perl_write_handler(ngx_event_t *ev);
+static void ngx_perl_resolver_timeout_handler(ngx_event_t *ev);
 static void ngx_perl_resolver_handler(ngx_resolver_ctx_t *ctx);
 
 #if (NGX_HTTP_SSL)
@@ -1547,6 +1548,7 @@ ngx_perl_resolver(SV *name, SV *timeout, SV *cb)
     ngx_http_core_loc_conf_t  *clcf;
     ngx_perl_resolver_t       *pr;
     ngx_resolver_ctx_t        *ctx, temp;
+    ngx_event_t               *ev;
     dSP;
 
     clcf = ngx_http_cycle_get_module_loc_conf(ngx_cycle, 
@@ -1604,9 +1606,7 @@ ngx_perl_resolver(SV *name, SV *timeout, SV *cb)
     ctx->data    = pr;
     ctx->timeout = clcf->resolver_timeout;
 
-    if (SvOK(timeout)) {
-        ctx->timeout = SvIV(timeout) * 1000;
-    } else if (clcf->resolver_timeout == NGX_CONF_UNSET_MSEC) {
+    if (clcf->resolver_timeout == NGX_CONF_UNSET_MSEC) {
         ctx->timeout = 30000; 
     }
 
@@ -1614,6 +1614,26 @@ ngx_perl_resolver(SV *name, SV *timeout, SV *cb)
         errno = NGX_PERL_EBADE;
         goto FATAL;
     }
+
+
+    /* timer */
+
+    Newz(0, ev, 1, ngx_event_t);
+
+    if (ev == NULL) {
+        ngx_resolve_name_done(ctx);
+        errno = NGX_PERL_ENOMEM;
+        goto FATAL;
+    }
+
+    ev->data    = ctx;
+    ev->handler = ngx_perl_resolver_timeout_handler;
+
+    pr->ev = ev;
+
+    ngx_add_timer ( ev,  SvOK (timeout) && SvIV (timeout) > 0 
+                            ? SvIV (timeout) * 1000 
+                            : 15000                            );
 
     return;
 
@@ -1646,9 +1666,34 @@ FATAL:
             pr->cb = NULL;
         }
 
+        if (pr->ev) {
+            if (pr->ev->timer_set) {
+                ngx_del_timer(pr->ev);
+            }
+
+            safefree(pr->ev);
+            pr->ev = NULL;
+        }
+
         safefree(pr);
     }
 
+    return;
+}
+
+
+static void
+ngx_perl_resolver_timeout_handler(ngx_event_t *ev)
+{
+    ngx_resolver_ctx_t  *ctx;
+
+    ctx = (ngx_resolver_ctx_t *) ev->data;
+
+    if (ev->timer_set) {
+        ngx_del_timer(ev);
+    }
+
+    ngx_perl_resolver_handler(ctx);
     return;
 }
 
@@ -1663,6 +1708,11 @@ ngx_perl_resolver_handler(ngx_resolver_ctx_t *ctx)
     dSP;
 
     pr = (ngx_perl_resolver_t *) ctx->data;
+
+    if (pr->ev->timer_set) {
+        ngx_del_timer(pr->ev);
+    }
+
 
     errno = 0;
 
@@ -1726,6 +1776,15 @@ ngx_perl_resolver_handler(ngx_resolver_ctx_t *ctx)
         if (pr->cb) {
             SvREFCNT_dec(pr->cb);
             pr->cb = NULL;
+        }
+
+        if (pr->ev) {
+            if (pr->ev->timer_set) {
+                ngx_del_timer(pr->ev);
+            }
+
+            safefree(pr->ev);
+            pr->ev = NULL;
         }
 
         safefree(pr);
