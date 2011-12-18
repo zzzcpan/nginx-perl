@@ -2054,7 +2054,7 @@ ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *timeout, SV *cb)
 
 
 void
-ngx_perl_ssl_handshaker(ngx_connection_t *c, SV *cb) 
+ngx_perl_ssl_handshaker(ngx_connection_t *c, SV *timeout, SV *cb) 
 {
 #if (NGX_HTTP_SSL)
     ngx_perl_connection_t     *plc;
@@ -2062,15 +2062,49 @@ ngx_perl_ssl_handshaker(ngx_connection_t *c, SV *cb)
 
     plc = (ngx_perl_connection_t *) c->data;
 
+    if (plc->ssl_handshake_timeout) {
+        SvREFCNT_dec(plc->ssl_handshake_timeout);
+        plc->ssl_handshake_timeout = NULL;
+    }
+
     if (plc->ssl_handshake_cb) {
         SvREFCNT_dec(plc->ssl_handshake_cb);
         plc->ssl_handshake_cb = NULL;
     }
 
-    plc->ssl              = 1;
-    plc->ssl_handshake_cb = cb;
+    plc->ssl                   = 1;
+    plc->ssl_handshake_cb      = cb;
+    plc->ssl_handshake_timeout = timeout;
 
     SvREFCNT_inc(cb);
+    SvREFCNT_inc(timeout);
+
+
+    if (c->read->timer_set) {
+        ngx_del_timer(c->read);
+    }
+
+    if (c->write->timer_set) {
+        ngx_del_timer(c->write);
+    }
+
+    if (!c->write->timer_set) {
+
+        if (plc->ssl_handshake_timeout != NULL  && 
+            SvOK  (plc->ssl_handshake_timeout)  && 
+            SvIV  (plc->ssl_handshake_timeout) >= 0) 
+        {
+            ngx_add_timer(c->write, SvIV(plc->ssl_handshake_timeout) * 1000);
+
+        } else {
+
+            ngx_log_error(NGX_LOG_ERR, c->log, 0,
+                "ngx_perl_ssl_handshaker: "
+                "incorrent timeout, using 15 s instead");
+
+            ngx_add_timer(c->write, 15000);
+        }
+    }
 
 
     plcf = ngx_http_cycle_get_module_loc_conf(ngx_cycle, ngx_http_perl_module);
@@ -2175,6 +2209,11 @@ ngx_perl_connection_cleanup(void *data)
     }
 
 #if (NGX_HTTP_SSL)
+
+    if (plc->ssl_handshake_timeout) {
+        SvREFCNT_dec(plc->ssl_handshake_timeout);
+        plc->ssl_handshake_timeout = NULL;
+    }
 
     if (plc->ssl_handshake_cb) {
         SvREFCNT_dec(plc->ssl_handshake_cb);
@@ -2334,7 +2373,36 @@ ngx_perl_write(ngx_connection_t *c)
 void
 ngx_perl_ssl_handshake(ngx_connection_t *c) 
 {
-    ngx_int_t  rc;
+    ngx_perl_connection_t  *plc;
+    ngx_int_t               rc;
+
+    plc = (ngx_perl_connection_t *) c->data;
+
+    if (c->read->timer_set) {
+        ngx_del_timer(c->read);
+    }
+
+    if (c->write->timer_set) {
+        ngx_del_timer(c->write);
+    }
+
+    if (!c->write->timer_set) {
+
+        if (plc->ssl_handshake_timeout != NULL  && 
+            SvOK  (plc->ssl_handshake_timeout)  && 
+            SvIV  (plc->ssl_handshake_timeout) >= 0) 
+        {
+            ngx_add_timer(c->write, SvIV(plc->ssl_handshake_timeout) * 1000);
+
+        } else {
+
+            ngx_log_error(NGX_LOG_ERR, c->log, 0,
+                "ngx_perl_ssl_handshaker: "
+                "incorrent timeout, using 15 s instead");
+
+            ngx_add_timer(c->write, 15000);
+        }
+    }
 
     rc = ngx_ssl_handshake(c);
 
@@ -2825,6 +2893,19 @@ ngx_perl_ssl_handshake_handler(ngx_connection_t *c)
     dSP;
 
     plc = (ngx_perl_connection_t *) c->data;
+
+    if (c->read->timer_set) {
+        ngx_del_timer(c->read);
+    }
+
+    if (c->write->timer_set) {
+        ngx_del_timer(c->write);
+    }
+
+    if (c->write->timedout) {
+        errno = NGX_PERL_ETIMEDOUT;
+        goto CALLBACK;
+    }
 
     if (c->error) {
         errno = NGX_PERL_EBADE;

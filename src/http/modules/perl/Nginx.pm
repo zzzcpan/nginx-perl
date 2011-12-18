@@ -628,7 +628,7 @@ Example:
         return NGX_READ;
     };
 
-=item ngx_ssl_handshaker $connection, sub { };
+=item ngx_ssl_handshaker $connection, $timeout, sub { };
 
 Creates its own internal handler for both reading and writing and tries 
 to do SSL handshake. 
@@ -654,7 +654,7 @@ Typically it should be called inside connector's callback:
         
         my $c = shift;
         
-        ngx_ssl_handshaker $c, sub {
+        ngx_ssl_handshaker $c, 15, sub {
             
             return NGX_CLOSE
                 if $!;

@@ -117,13 +117,14 @@ typedef struct {
 #if (NGX_HTTP_SSL)
     ngx_flag_t   ssl;
     SV          *ssl_handshake_cb;
+    SV          *ssl_handshake_timeout;
 #endif
 } ngx_perl_connection_t;
 
 ngx_int_t ngx_perl_connection_init(ngx_connection_t *c);
 ngx_connection_t *ngx_perl_connector(SV *address, SV *port, SV *timeout, 
         SV *cb);
-void ngx_perl_ssl_handshaker(ngx_connection_t *c, SV *cb);
+void ngx_perl_ssl_handshaker(ngx_connection_t *c, SV *timeout, SV *cb);
 void ngx_perl_writer(ngx_connection_t *c, SV *buf, SV *timeout, SV *cb);
 void ngx_perl_reader(ngx_connection_t *c, SV *buf, SV *min, SV *max, 
         SV *timeout, SV *cb);

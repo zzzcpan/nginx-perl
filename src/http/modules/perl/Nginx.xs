@@ -1410,14 +1410,14 @@ ngx_resolver(name, timeout, cb)
 
 
 void
-ngx_ssl_handshaker(c, cb)
-    PROTOTYPE: $&
+ngx_ssl_handshaker(c, timeout, cb)
+    PROTOTYPE: $$&
     CODE:
         ngx_connection_t  *c;
 
         c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
 
-        ngx_perl_ssl_handshaker(c, ST(1));
+        ngx_perl_ssl_handshaker(c, ST(1), ST(2));
 
 
 void
