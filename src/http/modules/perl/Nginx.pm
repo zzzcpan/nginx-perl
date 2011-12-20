@@ -678,26 +678,35 @@ seconds using resolver specified in F<nginx-perl.conf>.
 
 On success returns all resolved IP addresses into C<@_>.
 
-On error calls back with C<$!> set to some value. 
+On error calls back with C<$!> set to some value, $_[0] set to one of the
+resolver-specific error constants and with textual explanation in $_[1]:
+
+    NGX_RESOLVE_FORMERR
+    NGX_RESOLVE_SERVFAIL
+    NGX_RESOLVE_NXDOMAIN
+    NGX_RESOLVE_NOTIMP
+    NGX_RESOLVE_REFUSED
+    NGX_RESOLVE_TIMEDOUT
 
 This is a thin wrapper around nginx's internal resolver.
 All its current problems apply. To use it in production you'll need
 a local resolver, like named that does actual resolving.
 
     ngx_resolver $host, $timeout, sub {
-        retrun
-            if $!;
         
-        warn join(', ', @_)."\n";
+        if ($!) {
+            my $errcode = $_[0];
+            my $errstr  = $_[1];
+            
+            warn "failed to resolve $host: $errstr\n";
+            ...
+            
+            return;
+        }
         
+        my @IPs = @_; # list of all resolved IP addresses
         ...
     };
-
-IMPORTANT
-
-This wrapper is a bit too thin and currently lacks additional timer 
-to cancel name resolution on timeout. This is going to be fixed 
-before first official release.
 
 =back
 
