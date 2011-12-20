@@ -874,7 +874,8 @@ Check out F<eg/self-sufficient> to see all this in action:
 
 =head1 SEE ALSO
 
-L<Nginx::Util>,
+L<Nginx::Test>, L<Nginx::Util>, L<Nginx::Redis>,
+L<http://zzzcpan.github.com/nginx-perl>,
 L<http://wiki.nginx.org/EmbeddedPerlModule>,
 L<http://nginx.net/> 
 

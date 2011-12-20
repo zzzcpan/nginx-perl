@@ -22,7 +22,7 @@ Web page: L<http://zzzcpan.github.com/nginx-perl>
 =head1 SEE ALSO
 
 L<http://zzzcpan.github.com/nginx-perl>,
-L<Nginx>, L<Nginx::Util>, L<Nginx::Redis>,
+L<Nginx>, L<Nginx::Test>, L<Nginx::Util>, L<Nginx::Redis>,
 L<http://wiki.nginx.org/EmbeddedPerlModule>,
 L<http://nginx.net/> 
 
