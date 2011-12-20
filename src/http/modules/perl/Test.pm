@@ -100,27 +100,30 @@ sub wait_for_peer ($$) {
 
 
 sub prepare_nginx_dir_die {
-
-    use autodie;
-
     my ($dir, $conf, @pkgs) = @_;
 
     if (!-e $dir) {
-        mkdir "$dir";
-        mkdir "$dir/conf";
-        mkdir "$dir/lib";
-        mkdir "$dir/logs";
+        mkdir "$dir"
+            or die "Cannot create directory '$dir': $!";
+        mkdir "$dir/conf"
+            or die "Cannot create directory '$dir/conf': $!";
+        mkdir "$dir/lib"
+            or die "Cannot create directory '$dir/lib': $!";
+        mkdir "$dir/logs"
+            or die "Cannot create directory '$dir/logs': $!";
     }
 
     foreach ( "$dir/lib", 
               "$dir/logs" ) {
 
-        open my $fh, '>', "$_/.exists";
+        open my $fh, '>', "$_/.exists"
+            or die "Cannot open file '$_/.exists' for writing: $!";
         close $fh;
     }
 
     {
-        opendir my $d, "$dir/logs";
+        opendir my $d, "$dir/logs"
+            or die "Cannot opendir '$dir/logs': $!";
 
         my @FILES = grep { $_ ne '.' && $_ ne '..' && $_ ne '.exists' && 
                             -f "$dir/logs/$_" } 
@@ -133,8 +136,12 @@ sub prepare_nginx_dir_die {
     }
 
     {
-        open my $fh, '>', "$dir/conf/nginx-perl.conf";
+        open my $fh, '>', "$dir/conf/nginx-perl.conf"
+            or die "Cannot open file '$dir/conf/nginx-perl.conf' " .
+                   "for writing: $!";
+
         print $fh $conf;
+
         close $fh;
     }
 
@@ -152,8 +159,11 @@ sub prepare_nginx_dir_die {
             mkdir $fullpath  unless  -e $fullpath;
         }
 
-        open my $fh, '>', "$fullpath/$name.pm";
+        open my $fh, '>', "$fullpath/$name.pm"
+            or die "Cannot open file '$fullpath/$name.pm' for writing: $!";
+
         print $fh $_;
+
         close $fh;
     }
 }
@@ -191,9 +201,6 @@ $buf
 
 
 sub fork_nginx_die ($$) {
-
-    use autodie;
-
     my ($nginx, $path) = @_;
     my $pid = fork();
 
@@ -202,8 +209,11 @@ sub fork_nginx_die ($$) {
 
     if ($pid == 0) {
 
-        open STDOUT, '>', "$path/logs/stdout.log";
-        open STDERR, '>', "$path/logs/stderr.log";
+        open STDOUT, '>', "$path/logs/stdout.log"
+            or die "Cannot open file '$path/logs/stdout.log' for writing: $!";
+
+        open STDERR, '>', "$path/logs/stderr.log"
+            or die "Cannot open file '$path/logs/stderr.log' for writing: $!";
 
         exec $nginx, '-p', $path
             or die "exec '$nginx -p $path' failed\n";
@@ -246,16 +256,15 @@ sub quit_child ($) {
 
 
 sub get_nginx_conf_args_die ($) {
-
-    use autodie;
-
     my ($nginx) = @_;
 
     return  map {  $_ => 1  }
               grep {  /^--with/  }
                 map {  split ' ', (split ':')[1]  }  
                   grep {  /arguments/i  } 
-                      do {  open my $fh, '-|', "$nginx -V 2>&1"; <$fh>  } ;
+                     do {  open my $fh, '-|', "$nginx -V 2>&1"
+                               or die "Can't open '$nginx -V 2>&1 |': $!";
+                           <$fh>                                           } ;
 }
 
 
