@@ -22,6 +22,9 @@ plan skip_all => "Can't find executable binary ($nginx) to test"
         if  !$nginx    ||  
             !-x $nginx    ;
 
+plan 'no_plan';
+
+
 {
     my ($pid, $peer) = fork_nginx_handler_die $nginx, $testdir, '',<<'    END';
 
@@ -59,5 +62,4 @@ plan skip_all => "Can't find executable binary ($nginx) to test"
 }
 
 
-done_testing;
 

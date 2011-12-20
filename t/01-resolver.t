@@ -26,6 +26,9 @@ wait_for_peer '8.8.8.8:53', 1
     or  plan skip_all => "Cannot connect to 8.8.8.8:53";
 
 
+plan 'no_plan';
+
+
 {
     my ($pid, $peer) = fork_nginx_handler_die  
                       $nginx, $testdir, <<'    ENDCONF', <<'    ENDCODE';
@@ -154,5 +157,4 @@ wait_for_peer '8.8.8.8:53', 1
 
 
 
-done_testing;
 
