@@ -22,8 +22,21 @@ plan skip_all => "Can't find executable binary ($nginx) to test"
             !-x $nginx    ;
 
 
-wait_for_peer '8.8.8.8:53', 1
-    or  plan skip_all => "Cannot connect to 8.8.8.8:53";
+# choosing resolver
+
+my $ns;
+
+if (-e '/etc/resolv.conf') { 
+    ($ns) = grep {  ($_) = / nameserver \s* ( \d+\.\d+\.\d+\.\d+ ) /x  } 
+              do {  open my $fh, '<', '/etc/resolv.conf'; <$fh>  } ;
+}
+
+$ns = '8.8.8.8' 
+        unless $ns;
+
+wait_for_peer "$ns:53", 1
+    or  plan skip_all => "Cannot connect to $ns:53";
+
 
 
 plan 'no_plan';
@@ -31,9 +44,9 @@ plan 'no_plan';
 
 {
     my ($child, $peer) = fork_nginx_handler_die  
-                      $nginx, $dir, <<'    ENDCONF', <<'    ENDCODE';
+                      $nginx, $dir, <<"    ENDCONF", <<'    ENDCODE';
 
-        resolver 8.8.8.8;
+        resolver $ns;
 
     ENDCONF
 
@@ -73,7 +86,7 @@ plan 'no_plan';
     wait_for_peer $peer, 2;
 
 
-    for my $i (1 .. 4) {
+    for my $i (1 .. 2) {
         my ($body, $headers) = http_get $peer, '/?www.google.com', 2;
 
         my @IP = split ' ', $body;
@@ -86,7 +99,7 @@ plan 'no_plan';
             or  diag ("errno = $headers->{'x-errno'}");
     }
 
-    for my $i (1 .. 4) {
+    for my $i (1 .. 2) {
         my ($body, $headers) = http_get $peer, '/?nonexistent.domain', 2;
 
         isnt $headers->{'x-errno'}->[0], 0 , "nonexistent errno"
@@ -142,7 +155,7 @@ plan 'no_plan';
     wait_for_peer $peer, 2;
 
 
-    for my $i (1 .. 3) {
+    for my $i (1 .. 2) {
         my ($body, $headers) = http_get $peer, '/?nonexistent.domain', 2;
 
         isnt $headers->{'x-errno'}->[0], 0 , "timeout"
