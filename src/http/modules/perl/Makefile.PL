@@ -30,6 +30,8 @@ WriteMakefile(
     PM => {
         'Nginx.pm' => '$(INST_LIBDIR)/Nginx.pm',
         'Util.pm'  => '$(INST_LIBDIR)/Nginx/Util.pm',
-        'Redis.pm' => '$(INST_LIBDIR)/Nginx/Redis.pm'
+        'Redis.pm' => '$(INST_LIBDIR)/Nginx/Redis.pm',
+        'Test.pm'  => '$(INST_LIBDIR)/Nginx/Test.pm',
+        'Perl.pm'  => '$(INST_LIBDIR)/Nginx/Perl.pm',
     }
 );

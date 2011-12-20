@@ -21,7 +21,9 @@ $NGX_OBJS/src/http/modules/perl/Makefile:				\
 		src/http/modules/perl/Makefile.PL			\
 		src/http/modules/perl/Nginx.pm				\
 		src/http/modules/perl/Util.pm				\
-		src/http/modules/perl/Redis.pm
+		src/http/modules/perl/Redis.pm				\
+		src/http/modules/perl/Test.pm				\
+		src/http/modules/perl/Perl.pm
 	cp -p src/http/modules/perl/Nginx.xs $NGX_OBJS/src/http/modules/perl/
 	cp -p src/http/modules/perl/*.pm $NGX_OBJS/src/http/modules/perl/
 	cp -p src/http/modules/perl/typemap $NGX_OBJS/src/http/modules/perl/
@@ -34,5 +36,8 @@ $NGX_OBJS/src/http/modules/perl/Makefile:				\
 		$NGX_PERL Makefile.PL					\
 			LIB=$NGX_PERL_MODULES				\
 			INSTALLSITEMAN3DIR=$NGX_PERL_MODULES_MAN
+
+test:
+	PERL_DL_NONLAZY=1 $NGX_PERL "-MExtUtils::Command::MM" "-e" "test_harness(0, '$NGX_OBJS/src/http/modules/perl/blib/lib', '$NGX_OBJS/src/http/modules/perl/blib/arch')" t/*.t
 
 END

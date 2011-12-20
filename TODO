@@ -2,16 +2,6 @@
 
 	Things to do before release:
 
-	- bugfix: implement dedicated timer for ngx_perl_resolver,
-	  just like upstream does;
-
-	- proper tests, probably reuse some code from Maxim's test suite 
-	  Test::Nginx ( http://mdounin.ru/hg/nginx-tests/ );
-
-	- find a way to make and release separate testable modules
-	  on cpan, with meta module like Nginx::Perl to depend on
-	  or something;
-
 	- merge with latest nginx release;
 
 

@@ -180,4 +180,8 @@ upgrade:
 	test -f $NGX_PID_PATH.oldbin
 
 	kill -QUIT \`cat $NGX_PID_PATH.oldbin\`
+
+test:
+	\$(MAKE) -f $NGX_MAKEFILE test
+
 END
