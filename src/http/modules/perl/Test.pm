@@ -389,6 +389,8 @@ sub terminate {
         kill 'TERM', $$self;
         $$self = 0;
         wait;
+
+        select '','','', 0.1;
     }
 }
 
@@ -400,6 +402,8 @@ sub DESTROY {
         kill 'TERM', $$self;
         $$self = 0;
         wait;
+
+        select '','','', 0.1;
     }
 }
 
