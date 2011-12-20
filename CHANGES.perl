@@ -1,5 +1,10 @@
 
 
+	- added META.yml for CPAN;
+	- added Makefile.PL to install into perl's tree;
+	- added logo;
+	- added framework for writing tests;
+	- fix: dedicated timer for resolver;
 	- fix: uninitialized buffer for reader caused segfault,
 	  thanks to chenryn for helping to spot it;
 	- Nginx::Redis as a reusable redis client;
