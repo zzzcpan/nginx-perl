@@ -1610,11 +1610,6 @@ ngx_perl_resolver(SV *name, SV *timeout, SV *cb)
         ctx->timeout = 30000; 
     }
 
-    if (ngx_resolve_name(ctx) != NGX_OK) {
-        errno = NGX_PERL_EBADE;
-        goto FATAL;
-    }
-
 
     /* timer */
 
@@ -1634,6 +1629,12 @@ ngx_perl_resolver(SV *name, SV *timeout, SV *cb)
     ngx_add_timer ( ev,  SvOK (timeout) && SvIV (timeout) > 0 
                             ? SvIV (timeout) * 1000 
                             : 15000                            );
+
+
+    if (ngx_resolve_name(ctx) != NGX_OK) {
+        errno = NGX_PERL_EBADE;
+        goto FATAL;
+    }
 
     return;
 
