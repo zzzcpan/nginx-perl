@@ -15,8 +15,8 @@ use Test::More;
 use Nginx::Test;
 
 
-my $nginx   = find_nginx_perl;
-my $testdir = "objs/tests";
+my $nginx = find_nginx_perl;
+my $dir   = "objs/tests";
 
 plan skip_all => "Can't find executable binary ($nginx) to test"
         if  !$nginx    ||  
@@ -26,7 +26,7 @@ plan 'no_plan';
 
 
 {
-    my ($pid, $peer) = fork_nginx_handler_die $nginx, $testdir, '',<<'    END';
+    my ($child, $peer) = fork_nginx_handler_die $nginx, $dir, '',<<'    END';
 
         sub handler {
             my ($r) = @_;
@@ -56,9 +56,8 @@ plan 'no_plan';
     my ($body, $headers) = http_get $peer, '/', 2;
 
     ok $body =~ /Hello/i, "hello"
-        or diag "body = $body\n", cat_nginx_logs $testdir;
+        or diag "body = $body\n", cat_nginx_logs $dir;
 
-    quit_nginx $pid;
 }
 
 

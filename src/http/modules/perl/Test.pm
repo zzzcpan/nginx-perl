@@ -16,9 +16,7 @@ our @EXPORT    = qw(
     cat_nginx_logs
     get_nginx_conf_args_die
     fork_nginx_die
-    quit_nginx
     fork_child_die
-    quit_child
     http_get
     fork_nginx_handler_die
 
@@ -28,6 +26,8 @@ use Config;
 use IO::Socket;
 
 sub CRLF { "\x0d\x0a" }
+
+$Nginx::Test::PARENT = 1;
 
 
 sub find_nginx_perl () {
@@ -208,6 +208,7 @@ sub fork_nginx_die ($$) {
             if  !defined $pid;
 
     if ($pid == 0) {
+        $Nginx::Test::PARENT = 0;
 
         open STDOUT, '>', "$path/logs/stdout.log"
             or die "Cannot open file '$path/logs/stdout.log' for writing: $!";
@@ -219,15 +220,7 @@ sub fork_nginx_die ($$) {
             or die "exec '$nginx -p $path' failed\n";
     } 
 
-    return $pid;
-}
-
-
-sub quit_nginx ($) {
-    my ($pid) = @_;
-
-    kill 'QUIT', $pid; 
-    wait;
+    return Nginx::Test::Child->new ($pid);
 }
 
 
@@ -239,19 +232,13 @@ sub fork_child_die (&) {
             if  !defined $pid;
 
     if ($pid == 0) {
+        $Nginx::Test::PARENT = 0;
+
         &$cb;
         exit;
     } 
 
-    return $pid;
-}
-
-
-sub quit_child ($) {
-    my ($pid) = @_;
-
-    kill 'TERM', $pid; 
-    wait;
+    return Nginx::Test::Child->new ($pid);
 }
 
 
@@ -381,6 +368,40 @@ $code
     return ($pid, $peer);
 }
 
+
+1;
+package Nginx::Test::Child;
+
+
+sub new {
+    my $class = shift;
+    my $pid   = shift;
+    my $self  = \$pid;
+
+    bless $self, $class;
+}
+
+
+sub terminate {
+    my $self = shift;
+
+    if ($$self && $Nginx::Test::PARENT) {
+        kill 'TERM', $$self;
+        $$self = 0;
+        wait;
+    }
+}
+
+
+sub DESTROY {
+    my $self = shift;
+
+    if ($$self && $Nginx::Test::PARENT) {
+        kill 'TERM', $$self;
+        $$self = 0;
+        wait;
+    }
+}
 
 1;
 __END__

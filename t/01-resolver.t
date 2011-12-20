@@ -14,8 +14,8 @@ use Data::Dumper;
 use Test::More;
 use Nginx::Test;
 
-my $nginx   = find_nginx_perl;
-my $testdir = "objs/tests";
+my $nginx = find_nginx_perl;
+my $dir   = "objs/tests";
 
 plan skip_all => "Can't find executable binary ($nginx) to test"
         if  !$nginx    ||  
@@ -30,8 +30,8 @@ plan 'no_plan';
 
 
 {
-    my ($pid, $peer) = fork_nginx_handler_die  
-                      $nginx, $testdir, <<'    ENDCONF', <<'    ENDCODE';
+    my ($child, $peer) = fork_nginx_handler_die  
+                      $nginx, $dir, <<'    ENDCONF', <<'    ENDCODE';
 
         resolver 8.8.8.8;
 
@@ -79,7 +79,7 @@ plan 'no_plan';
         my @IP = split ' ', $body;
 
         ok $IP[0] =~ /\d+\.\d+\.\d+\.\d+/, "google's IP resolved $i"
-            or  diag ("body = $body\n", cat_nginx_logs $testdir),
+            or  diag ("body = $body\n", cat_nginx_logs $dir),
                   last;
 
         is $headers->{'x-errno'}->[0], 0, "clean errno"
@@ -90,17 +90,16 @@ plan 'no_plan';
         my ($body, $headers) = http_get $peer, '/?nonexistent.domain', 2;
 
         isnt $headers->{'x-errno'}->[0], 0 , "nonexistent errno"
-            or  diag ("body = $body\n", cat_nginx_logs $testdir),
+            or  diag ("body = $body\n", cat_nginx_logs $dir),
                   last;
     }
 
-
-    quit_nginx $pid;
+    undef $child;
 }
 
 {
-    my ($pid, $peer) = fork_nginx_handler_die  
-                      $nginx, $testdir, <<'    ENDCONF', <<'    ENDCODE';
+    my ($child, $peer) = fork_nginx_handler_die  
+                      $nginx, $dir, <<'    ENDCONF', <<'    ENDCODE';
 
         resolver_timeout  1;
         resolver          1.2.3.4;
@@ -147,12 +146,12 @@ plan 'no_plan';
         my ($body, $headers) = http_get $peer, '/?nonexistent.domain', 2;
 
         isnt $headers->{'x-errno'}->[0], 0 , "timeout"
-            or  diag ("body = $body\n", cat_nginx_logs $testdir),
+            or  diag ("body = $body\n", cat_nginx_logs $dir),
                   last;
     }
 
 
-    quit_nginx $pid;
+    undef $child;
 }
 
 
