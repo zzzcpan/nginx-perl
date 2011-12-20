@@ -1,0 +1,27 @@
+---
+abstract: 'Full-featured perl support for nginx'
+author:
+  - 'Alexandr Gomoliako <zzz@zzz.org.ua>'
+build_requires:
+  ExtUtils::MakeMaker: 0
+configure_requires:
+  ExtUtils::MakeMaker: 0
+dynamic_config: 1
+generated_by: 'hands'
+license: bsd
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Nginx-Perl
+no_index:
+  directory:
+    - t
+    - html
+    - contrib
+    - conf
+    - auto
+    - man
+    - inc
+requires:
+  Test::More: 0
+version: 1.1.9.1
