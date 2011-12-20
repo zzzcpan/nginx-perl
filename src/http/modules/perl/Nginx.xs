@@ -105,6 +105,7 @@ ngx_http_perl_output(ngx_http_request_t *r, ngx_buf_t *b)
 MODULE = Nginx    PACKAGE = Nginx
 
 BOOT:
+{
     HV *stash = gv_stashpv ("Nginx", 1);
     ci (stash, "NGX_DONE",                       NGX_DONE);
     ci (stash, "NGX_HTTP_LAST",                  NGX_HTTP_LAST);
@@ -163,6 +164,7 @@ BOOT:
     ci (stash, "HTTP_SERVICE_UNAVAILABLE",       503);
     ci (stash, "HTTP_GATEWAY_TIME_OUT",          504);
     ci (stash, "HTTP_INSUFFICIENT_STORAGE",      507);
+}
 
 PROTOTYPES: DISABLE
 
