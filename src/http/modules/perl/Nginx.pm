@@ -596,6 +596,8 @@ NGX_EOF in case of EOF.
         return NGX_WRITE;
     };
 
+Be aware, that C<$min> and C<$max> doesn't apply to the amount of data
+you want to read but rather to the appropriate buffer size to call back with.
 
 =item ngx_writer $connection, $buf, $timeout, sub { };
 
