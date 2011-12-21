@@ -330,8 +330,12 @@ sub fork_nginx_handler_die ($$$$) {
         http {
             default_type  text/plain;
 
-            perl_inc  blib/lib;
-            perl_inc  blib/arch;
+            perl_inc  ../../../blib/lib;
+            perl_inc  ../../../blib/arch;
+            perl_inc  ../../blib/lib;
+            perl_inc  ../../blib/arch;
+            perl_inc  ../blib/lib;
+            perl_inc  ../blib/arch;
 
             perl_inc  ../../objs/src/http/modules/perl/blib/lib;
             perl_inc  ../../objs/src/http/modules/perl/blib/arch;
@@ -591,6 +595,11 @@ Expects to have C<sub handler { ... }> in the code. Dies on errors.
     ...
      
     undef $child; 
+
+Be aware that this function is not suited for every module. It expects 
+C<$dir> to be relative to the current directory or any of its subdirectories,
+i.e. F<foo>, F<foo/bar>. And also expects F<blib/lib> and F<blib/arch>
+to contain your libraries, which is where L<ExtUtils::MakeMaker> puts them.
 
 =item ($body, $headers) = http_get $peer, $uri, $timeout;
 
