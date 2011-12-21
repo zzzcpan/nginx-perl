@@ -106,6 +106,115 @@ Nginx - full-featured perl support for nginx
 
 =head1 SYNOPSIS
 
+    use Nginx;
+    
+    # nginx's asynchronous resolver
+    #     "resolver 1.2.3.4;" in nginx-perl.conf
+    
+    ngx_resolver "www.google.com", 15, sub {
+        my (@IPs) = @_;
+        
+        if ($!) {
+            my ($errcode, $errstr) = @_;
+            ngx_log_error $!, "Cannot resolve google's IP: $errstr";
+        }
+    };
+    
+    # timer
+    
+    ngx_timer 5, 0, sub {
+        ngx_log_notice 0, "5 seconds gone";
+    };
+    
+    # asynchronous connections
+    # with explicit flow control
+    
+    ngx_connector "1.2.3.4", 80, 15, sub {
+        if ($!) {
+            ngx_log_error $!, "Connect error: $!";
+            return NGX_CLOSE;
+        }
+        
+        my $c = shift;  # connection
+        my $wbuf = "GET /\x0d\x0a";
+        my $rbuf;
+        
+        ngx_writer $c, $wbuf, 15, sub {
+            if ($!) {
+                ngx_log_error $!, "Write error: $!";
+                return NGX_CLOSE;
+            }
+            
+            return NGX_READ;
+        };
+        
+        ngx_reader $c, $rbuf, 0, 0, 15, sub {
+            if ($! && $! != NGX_EOF) { 
+                ngx_log_error $!, "Read error: $!";
+                return NGX_CLOSE;
+            }
+            
+            if ($! == NGX_EOF) {
+                ngx_log_info 0, "response length: " . length ($rbuf);
+                return NGX_CLOSE;
+            }
+            
+            return NGX_READ;  # no errors - read again
+        };
+        
+        return NGX_WRITE;  # what to do on connect
+    };
+    
+    # SSL handshake
+    
+    ngx_connector "1.2.3.4", 80, 15, sub {
+        ...
+        my $c = shift;
+        
+        ngx_ssl_handshaker $c, 15, sub {
+            ...
+            ngx_writer $c, $wbuf, 15, sub {
+                ...
+            };
+            
+            ngx_reader $c, $rbuf, 0, 0, 15, sub {
+                ...
+            };
+            
+            return NGX_WRITE;
+        };
+        
+        return NGX_SSL_HANDSHAKER;
+    };
+    
+    # asynchronous response
+    # via HTTP API
+    
+    sub handler {
+        my ($r) = shift;
+        
+        $r->main_count_inc;
+        
+        ngx_resolver "www.google.com", 15, sub {
+            
+            $r->send_http_header ('text/html');
+            
+            unless ($!) {
+                lcoal $, = ', ';
+                $r->print ("OK, @_\n");
+            } else {
+                $r->print ("FAILED, $_[1]\n");
+            }
+            
+            $r->send_special (NGX_HTTP_LAST);
+            $r->finalize_request (NGX_OK);
+        };
+         
+        return NGX_DONE;
+    }
+    
+    # and more... 
+
 F<nginx-perl.conf>:
 
     http {
@@ -118,17 +227,11 @@ F<nginx-perl.conf>:
         perl_exit_worker  My::App::exit_worker;
         
         perl_eval  '$My::App::SOME_VAR = "foo"';
-        
         ...
         
         server {
             location / {
                 perl_handler  My::App::handler;
-        ...
-        
-        server {
-            location / {
-                perl_app  app.pl;
         ...
 
 F<My/App.pm>:
@@ -139,49 +242,16 @@ F<My/App.pm>:
     
     sub handler {
         my $r = shift;
-        
-        $r->main_count_inc;
-        
-        ngx_timer 1, 0, sub {
-            $r->send_http_header('text/html');
-            $r->print("OK\n");
-            
-            $r->send_special(NGX_HTTP_LAST);
-            $r->finalize_request(NGX_OK);
-        };
-        
-        return NGX_DONE;
-    }
-
-F<app.pl>:
-
-    use Nginx;
-    
-    sub {
-        my $r = shift;
-        
         ...
-    };
+    }
+    ...
 
 =head1 DESCRIPTION
 
 Nginx with capital I<N> is a part of B<nginx-perl> distribution.
 
-nginx-perl is aimed to support asynchronous functions for embedded perl
-along with other little features to make it nice and usable perl web server.
-
-Currently includes:
-
-    - official old perl API;
-    - asynchronous connections (ngx_connector, ngx_reader, ngx_writer);
-    - timer (ngx_timer);
-    - SSL without cached sessions (ngx_ssl_handshaker);
-    - simple resolver (ngx_resolver);
-    - access handlers (perl_access);
-    - app handlers (perl_app);
-    - configuration level eval (perl_eval);
-    - init_worker handlers (perl_init_worker);
-    - client connection takeover for websockets, etc;
+Nginx-perl brings asynchronous functions into embedded perl 
+along with other features to make it nice and usable perl web server.
 
 =head1 RATIONALE
 
