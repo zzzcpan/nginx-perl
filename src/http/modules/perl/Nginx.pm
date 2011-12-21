@@ -214,21 +214,25 @@ complexity as much as possible.
 
 =head1 INSTALLATION
 
-In this distribution perl is enabled by default, 
-so just F<./configure> should work.
+As usual for perl extensions:
 
-But to build with different perl and SSL support use something like:
-
-    % ./configure \
-         --with-http_ssl_module \
-         --with-perl=/home/you/perl5/perlbrew/perls/perl-5.14.2/bin/perl
+    % perl Makefile.PL
     % make
-
-nginx-perl can be installed alongside nginx. It uses 
-capital B<N> for perl modules and F<nginx-perl> for binaries.
-So, it is safe to do:
-
+    % make test
     % make install
+
+F<Makefile.PL> supports everything F<./configure> does. 
+To build it with SSL support use something like:
+
+    % perl Makefile.PL --with-http_ssl_module
+
+Or if you want to install it into different perl simply run F<Makefile.PL>
+undef it:
+
+    % /home/zzz/perl5/perlbrew/perls/perl-5.14.2/bin/perl Makefile.PL
+
+It is safe to install nginx-perl alongside nginx. It uses 
+capital B<N> for perl modules and F<nginx-perl> for binaries.
 
 =head1 RUNNING EXAMPLES
 
