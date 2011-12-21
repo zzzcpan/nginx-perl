@@ -10,11 +10,11 @@ our $VERSION   = '1.1.9.1';
 our @EXPORT    = qw( 
 
     find_nginx_perl
+    get_nginx_conf_args_die
     get_unused_port 
     wait_for_peer 
     prepare_nginx_dir_die
     cat_nginx_logs
-    get_nginx_conf_args_die
     fork_nginx_die
     fork_child_die
     http_get
@@ -45,6 +45,8 @@ sub find_nginx_perl () {
               if  -f $_ && 
                   -x $_;
     }
+
+    return undef;
 }
 
 
@@ -310,7 +312,8 @@ sub http_get ($$$) {
 sub fork_nginx_handler_die ($$$$) {
     my ($nginx, $path, $conf, $code) = @_;
 
-    my $port = get_unused_port;
+    my $port = get_unused_port
+        or die "Cannot get unused port";
 
     prepare_nginx_dir_die $path, <<"    ENDCONF", <<"    ENDPKG";
 
@@ -326,6 +329,9 @@ sub fork_nginx_handler_die ($$$$) {
 
         http {
             default_type  text/plain;
+
+            perl_inc  blib/lib;
+            perl_inc  blib/arch;
 
             perl_inc  ../../objs/src/http/modules/perl/blib/lib;
             perl_inc  ../../objs/src/http/modules/perl/blib/arch;
@@ -417,39 +423,86 @@ Nginx::Test - simple framework for writing tests for nginx-perl and nginx
 =head1 SYNOPSIS
 
     use Nginx::Test;
+     
+    my $nginx = find_nginx_perl;
+    my $dir   = 'tmp/test';
     
-
+    my ($child, $peer) = 
+        fork_nginx_handler_die  $nginx, $dir, '', <<'END';
+        
+        sub handler {
+            my $r = shift;
+            ...
+             
+            return OK;
+        }
+        
+    END
+    
+    wait_for_peer $peer, 2
+        or die "peer never started\n";
+    
+    my ($body, $headers) = http_get $peer, "/", 2;
+    ...
     
 =head1 DESCRIPTION
 
+Making sure testing isn't a nightmare. 
 
-
-
+This module provides some basic functions to find nginx-perl, prepare
+configuration, generate handler, start in a child process, query it and
+get something back. And it comes with Nginx::Perl. You can simply add it
+as a dependency for you module and use.
 
 =head1 EXPORT
 
     find_nginx_perl
+    get_nginx_conf_args_die
     get_unused_port 
     wait_for_peer 
     prepare_nginx_dir_die
     cat_nginx_logs
-    get_nginx_conf_args_die
     fork_nginx_die
-    quit_nginx
     fork_child_die
-    quit_child
+    fork_nginx_handler_die
     http_get
 
 =head1 FUNCTIONS
 
 =over 4
 
-=item prepare_nginx_dir_die $path, $conf, $package1, $package2, ...
+=item $nginx = find_nginx_perl ();
 
-Create directory tree suitable for nginx-perl, put there config
-and packages specified as string scalars.
+Finds executable F<nginx-perl> binary to run. Returns C<undef> if
+can't find any or executable path otherwise. 
 
-Example:
+    $nginx = './objs/nginx-perl'
+
+=item %CONFARGS = get_nginx_conf_args_dir $nginx;
+
+Runs C<nginx-perl -V> and parses its output to produce set
+of keys out of the list of configure arguments:
+
+    %CONFARGS = ( '--with-http_ssl_module' => 1,
+                  '--with-...'             => 1  )
+
+=item $port = get_unused_port ();
+
+Gives you available port number to bind to. Tries to use it first.
+Returns undef on error.
+
+=item $rv = wait_for_peer "$host:$port", $timeout;
+
+Tries to connect to C<$host:$port> within $timeout. Returns C<1>
+on success and C<undef> on error.
+
+    wait_for_peer "127.0.0.1:1234", 2
+        or ...;
+
+=item prepare_nginx_dir_die $dir, $conf, $package1, $package2, ...;
+
+Creates directory tree suitable to run F<nginx-perl> from. Puts there 
+config and packages specified as string scalars. Dies on errors.
 
     prepare_nginx_dir_die "tmp/foo", <<'ENDCONF', <<'ENDONETWO';
     
@@ -476,6 +529,81 @@ Example:
         1;
     
     ENDONETWO
+
+=item $text = cat_nginx_logs $dir;
+
+Scans C<$dir> for logs and concatenates them into a single scalar.
+Useful for diagnostics.
+
+    prepate_nginx_dir_dir $dir, ... 
+    ...
+    
+    ok $foo, "bar", "foo is bar"
+        or diag cat_nginx_logs $dir;
+
+=item $child = fork_nginx_die $nginx, $dir;
+
+Forks F<nginx-perl> using executable binary from C<$nginx> and 
+prepared directory path from C<$dir>. Dies on errors.
+Internally does something like this: C<"$nginx -p $dir">
+
+    my $child = fork_nginx_die $nginx, $dir;
+    ...
+     
+    undef $child;
+
+=item $child = fork_child_die sub { ... };
+
+Forks sub in a child process. Dies on errors.
+
+    my $child = fork_child_die sub {
+        ...
+         
+        sleep 5;  
+    };
+    ...
+     
+    undef $child;
+
+=item ($child, $peer) = fork_nginx_handler_dir $nginx, $dir, $conf, $code;
+
+Gets unused port, prepares directory for nginx with predefined 
+package name, forks nginx and gives you child object and peer back.
+Allows to inject C<$conf> into config and C<$code> into the package.
+Expects to have C<sub handler { ... }> in the code. Dies on errors.
+
+    my ($child, $peer) = 
+        fork_nginx_handler_die $nginx, $dir, <<'ENDCONF', <<'ENDCODE';
+        
+        resolver 8.8.8.8;
+        
+    ENDCONF
+
+        sub handler {
+            my ($r) = @_;
+            ...
+            
+            return OK;
+        }
+        
+    ENDCODE
+    
+    ...
+     
+    undef $child; 
+
+=item ($body, $headers) = http_get $peer, $uri, $timeout;
+
+Connects to C<$peer>, sends GET request and return C<$body> and C<$headers>.
+
+    my ($body, $headers) = http_get '127.0.0.1:1234', '/', 2;
+    
+    $headers = {  _status        => 200,
+                  _message       => 'OK',
+                  _version       => 'HTTP/1.0',
+                  content-type   => ['text/html'],
+                  content-length => [1234],
+                  ...                               }
 
 =back
 
