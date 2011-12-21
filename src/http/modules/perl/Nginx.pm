@@ -250,8 +250,8 @@ F<My/App.pm>:
 
 Nginx with capital I<N> is a part of B<nginx-perl> distribution.
 
-Nginx-perl brings asynchronous functions into embedded perl 
-along with other features to make it nice and usable perl web server.
+Nginx-perl brings asynchronous functions and other useful features 
+into embedded perl to turn it into nice and powerful perl web server.
 
 =head1 RATIONALE
 
