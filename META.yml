@@ -22,6 +22,7 @@ no_index:
     - auto
     - man
     - inc
+    - eg
 requires:
   Redis::Parser::XS: 0
 version: 1.1.9.1
