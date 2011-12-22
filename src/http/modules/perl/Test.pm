@@ -6,7 +6,7 @@ no  warnings 'uninitialized';
 
 require Exporter;
 our @ISA       = qw(Exporter);
-our $VERSION   = '1.1.9.1';
+our $VERSION   = '1.1.11.1';
 our @EXPORT    = qw( 
 
     find_nginx_perl

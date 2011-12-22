@@ -1,5 +1,8 @@
 
 
+1.1.11.1 Thu Dec 22 03:48:41 EET 2011
+	- merging with nginx-1.1.11;
+	- four tests;
 	- added META.yml for CPAN;
 	- added Makefile.PL to install into perl's tree;
 	- added logo;

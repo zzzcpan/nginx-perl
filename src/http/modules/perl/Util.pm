@@ -7,7 +7,7 @@ no  warnings 'uninitialized';
 require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT    = qw(ngx_http_req ngx_pure_http_req);
-our $VERSION   = '1.1.9.1';
+our $VERSION   = '1.1.11.1';
 
 use Nginx;
 

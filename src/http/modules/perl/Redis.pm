@@ -8,7 +8,7 @@ use bytes;
 require Exporter;
 our @ISA     = qw(Exporter);
 our @EXPORT  = qw(ngx_redis ngx_redis_client ngx_redis_request);
-our $VERSION = '1.1.9.1';
+our $VERSION = '1.1.11.1';
 
 use Nginx;
 use Redis::Parser::XS;
