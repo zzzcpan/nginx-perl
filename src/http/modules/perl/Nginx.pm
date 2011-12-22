@@ -184,7 +184,7 @@ Nginx - full-featured perl support for nginx
             return NGX_WRITE;
         };
         
-        return NGX_SSL_HANDSHAKER;
+        return NGX_SSL_HANDSHAKE;
     };
     
     # asynchronous response
