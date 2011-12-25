@@ -7,8 +7,10 @@ require Exporter;
 our @ISA    = qw(Exporter);
 our @EXPORT = qw(
 
+    ngx_escape_uri
     ngx_prefix
     ngx_conf_prefix
+
     ngx_log_error
     ngx_log_notice
     ngx_log_info
@@ -52,6 +54,13 @@ our @EXPORT = qw(
     NGX_OK
     NGX_HTTP_LAST
 
+    NGX_ESCAPE_URI
+    NGX_ESCAPE_ARGS
+    NGX_ESCAPE_URI_COMPONENT
+    NGX_ESCAPE_HTML
+    NGX_ESCAPE_REFRESH
+    NGX_ESCAPE_MEMCACHED
+    NGX_ESCAPE_MAIL_AUTH
 
     OK
     DECLINED
@@ -425,6 +434,44 @@ Which means there is no need to call $r->has_request_body there.
         server {
             location / {
                 perl_app  /path/to/app.pl;
+
+=back
+
+=head1 INTERNAL FUNCTIONS
+
+=over 4
+
+=item $uri = ngx_escape_uri $src_uri, $type;
+
+=item $uri = ngx_escape_uri $src_uri;
+
+Escapes C<$src_uri> using internal C<ngx_escape_uri> function from 
+F<src/core/ngx_string.c>. If C<$type> is specified, uses it or 
+NGX_ESCAPE_URI otherwise.
+
+    my $foo = ngx_escape_uri 'a b';
+      # gives 'a%20b'
+    
+    my $foo = ngx_escape_uri 'a b', NGX_ESCAPE_URI;
+
+Type defines what characters to escape. 
+
+    NGX_ESCAPE_URI                " ", "#", "%", "?", 
+                                  %00-%1F, %7F-%FF
+                                 
+    NGX_ESCAPE_ARGS               " ", "#", "%", "&", "+", "?", 
+                                  %00-%1F, %7F-%FF 
+                                 
+    NGX_ESCAPE_URI_COMPONENT      everything except: 
+                                   ALPHA, DIGIT, "-", ".", "_", "~"
+                                 
+    NGX_ESCAPE_HTML               " ", "#", """, "%", "'", 
+                                  %00-%1F, %7F-%FF
+                                 
+    NGX_ESCAPE_REFRESH            " ", """, "%", "'", 
+                                  %00-%1F, %7F-%FF
+                                 
+    NGX_ESCAPE_MEMCACHED          " ", "%", %00-%1F
 
 =back
 

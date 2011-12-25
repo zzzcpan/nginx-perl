@@ -131,6 +131,13 @@ BOOT:
     ci (stash, "NGX_RESOLVE_NOTIMP",             NGX_RESOLVE_NOTIMP);
     ci (stash, "NGX_RESOLVE_REFUSED",            NGX_RESOLVE_REFUSED);
     ci (stash, "NGX_RESOLVE_TIMEDOUT",           NGX_RESOLVE_TIMEDOUT);
+    ci (stash, "NGX_ESCAPE_URI",                 NGX_ESCAPE_URI);
+    ci (stash, "NGX_ESCAPE_ARGS",                NGX_ESCAPE_ARGS);
+    ci (stash, "NGX_ESCAPE_URI_COMPONENT",       NGX_ESCAPE_URI_COMPONENT);
+    ci (stash, "NGX_ESCAPE_HTML",                NGX_ESCAPE_HTML);
+    ci (stash, "NGX_ESCAPE_REFRESH",             NGX_ESCAPE_REFRESH);
+    ci (stash, "NGX_ESCAPE_MEMCACHED",           NGX_ESCAPE_MEMCACHED);
+    ci (stash, "NGX_ESCAPE_MAIL_AUTH",           NGX_ESCAPE_MAIL_AUTH);
     ci (stash, "OK",                             0);
     ci (stash, "DECLINED",                       -5);
     ci (stash, "HTTP_OK",                        200);
@@ -1233,6 +1240,38 @@ ctx(r, ...)
 
             ctx->ctx = newSVsv(ST(1));
         }
+    OUTPUT:
+        RETVAL
+
+
+SV *
+ngx_escape_uri(uri, ...)
+    PROTOTYPE: $;$
+    CODE:
+        u_char     *src, *dst;
+        SV         *sv;
+        uintptr_t   n; 
+        ngx_uint_t  t;
+        
+        src = (u_char *) SvPV_nolen(ST(0));
+        
+        if (items == 1) {
+            t = NGX_ESCAPE_URI;
+        } else {
+            t = (ngx_uint_t) SvIV(ST(1));
+        }
+        
+        n = ngx_escape_uri(NULL, src, SvCUR(ST(0)), t);
+
+        sv = newSV(SvCUR(ST(0)) + 1 + n * 2);
+        SvPOK_on(sv);
+        dst = (u_char *) SvPV_nolen(sv);
+
+        n = ngx_escape_uri(dst, src, SvCUR(ST(0)), t);
+        
+        SvCUR_set(sv, (u_char *) n - dst);
+        
+        RETVAL = sv;
     OUTPUT:
         RETVAL
 
