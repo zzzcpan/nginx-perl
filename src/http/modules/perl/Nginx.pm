@@ -558,7 +558,92 @@ because it allows to avoid post processing response the old way.
 
 =head1 HTTP ACCESS HANDLER
 
-todo
+Access handler is a perfect place for access control. Return C<NGX_OK>
+to allow access or some HTTP error to deny:
+
+    sub access_handler {
+        my ($r) = @_;
+        
+        if ($r->uri eq '/private') {
+            return 403;
+        }
+        
+        return NGX_OK;
+    }
+
+It is also possible to do something asynchronously, as with content handler,
+but a bit differently. On success we have to pass request to the next
+phase handler but finalize it on error. As before, C<NGX_DONE> means 
+that we are going to process request ourselves. So, let's rewrite first 
+example but make it suitable for asynchronous execution:
+
+    sub access_handler {
+        my ($r) = @_;
+        
+        if ($r->uri eq '/private') {
+            $r->finazlie_request(403);
+            return NGX_DONE;
+        }
+        
+        $r->phase_handler_inc;
+        $r->core_run_phases;
+        return NGX_DONE;
+    }
+
+Now it is possible to use timer or redis client or any other asynchronous
+function:
+
+    sub access_handler {
+        my ($r) = @_;
+        
+        ngx_timer 1, 0, sub {
+            
+            if ($r->uri eq '/private') {
+                $r->finalize_request(403);
+                return;
+            } 
+            
+            $r->phase_handler_inc;
+            $r->core_run_phases;
+        };
+        
+        return NGX_DONE;
+    }
+
+One of the interesting things you can do with it is putting username into 
+internal variable:
+
+    sub access_handler {
+        my ($r) = @_;
+        
+        ngx_timer 1, 0, sub {
+            
+            $r->variable("my_username", "foobar");
+            
+            $r->phase_handler_inc;
+            $r->core_run_phases;
+        };
+        
+        return NGX_DONE;
+    }
+
+It allows you to pass this variable to the upstream as a header
+or use it in any other way in configuration:
+
+    server {
+        set $my_username "guest";
+        
+        location / {
+            perl_access  Foo::access_handler;
+            
+            proxy_pass        http://1.2.3.4:5678; 
+            proxy_set_header  X-My-Username  $my_username;
+        }
+    }
+
+Be aware that nginx might call access handler more than once depending
+on your configuration. And if you are using redis for this you should
+consider caching reply even for a little time.
 
 =head1 FLOW CONTROL
 
