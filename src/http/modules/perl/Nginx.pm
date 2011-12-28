@@ -437,19 +437,6 @@ Which means there is no need to call $r->has_request_body there.
 
 =back
 
-=head1 NAMING
-
-    NGX_FOO_BAR  -- constants
-    ngx_*r       -- asynchronous functions (creators)
-    NGX_VERB     -- flow control constants 
-    ngx_verb     -- flow control functions
-    $r->foo_bar  -- request object's methods
-
-Each asynchronous function has an B<r> at the end of its name. This is 
-because those functions are creators of handlers with some parameters. 
-E.g. ngx_writer creates write handler for some connection with some
-scalar as a buffer.
-
 =head1 INTERNAL FUNCTIONS
 
 =head3 C<< $uri = ngx_escape_uri $src_uri, $type >>;
@@ -801,7 +788,22 @@ Allows to move to the next phase handler from access handler.
 Allows to break out of access handler and continue later from
 some other callback.
 
-=head1 FLOW CONTROL
+=head1 ASYNCHRONOUS API
+
+=head2 NAMING
+
+    NGX_FOO_BAR  -- constants
+    ngx_*r       -- asynchronous functions (creators)
+    NGX_VERB     -- flow control constants 
+    ngx_verb     -- flow control functions
+    $r->foo_bar  -- request object's methods
+
+Each asynchronous function has an B<r> at the end of its name. This is 
+because those functions are creators of handlers with some parameters. 
+E.g. ngx_writer creates write handler for some connection with some
+scalar as a buffer.
+
+=head2 FLOW CONTROL
 
 To specify what to do after each callback we can either call some 
 function or return some value and let handler do it for us. 
@@ -852,8 +854,7 @@ This will be different, if we already have connection somehow:
     
     ngx_read($c);
 
-
-=head1 ERROR HANDLING
+=head2 ERROR HANDLING
 
 Each ngx_* handler will call back on any error with C<$!> set to some value
 and reset to 0 otherwise. 
@@ -872,7 +873,7 @@ Example:
         ...
     };
 
-=head1 ASYNCHRONOUS API
+=head2 FUNCTIONS
 
 =head3 C<< ngx_timer $after, $repeat, sub { }; >>
 
