@@ -24,6 +24,4 @@ no_index:
     - objs
     - inc
     - eg
-requires:
-  Redis::Parser::XS: 0
-version: 1.1.11.1
+version: 1.1.12.1
