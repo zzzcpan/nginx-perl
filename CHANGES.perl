@@ -1,5 +1,12 @@
 
 
+	- merged with nginx-1.1.12;
+	- added tests for internal functions;
+	- added ngx_escape_uri;
+	- redis client moved to cpan (Nginx::Redis);
+	- http client on cpan as well (Nginx::HTTP);
+	- improved documentation;
+
 1.1.11.1 Thu Dec 22 03:48:41 EET 2011
 	- merging with nginx-1.1.11;
 	- four tests;
