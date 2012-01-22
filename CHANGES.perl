@@ -1,5 +1,7 @@
 
 
+	- merged with nginx-1.1.13;
+	- fixed make to use blib/;
 	- merged with nginx-1.1.12;
 	- added tests for internal functions;
 	- added ngx_escape_uri;
