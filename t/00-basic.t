@@ -6,17 +6,13 @@ use strict;
 use warnings;
 no  warnings 'uninitialized';
 
-# we don't have blib here
-use lib 'objs/src/http/modules/perl/blib/lib', 
-        'objs/src/http/modules/perl/blib/arch';
-
 use Data::Dumper;
 use Test::More;
 use Nginx::Test;
 
 
 my $nginx = find_nginx_perl;
-my $dir   = "objs/tests";
+my $dir   = "objs/t00";
 
 plan skip_all => "Can't find executable binary ($nginx) to test"
         if  !$nginx    ||  

@@ -1,4 +1,5 @@
 objs/
+blib/
 Makefile
 *.core
 CHANGES.ru

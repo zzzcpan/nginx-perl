@@ -18,6 +18,7 @@ our @EXPORT    = qw(
     fork_nginx_die
     fork_child_die
     http_get
+    get_nginx_incs
     fork_nginx_handler_die
 
 );
@@ -32,8 +33,37 @@ $Nginx::Test::PARENT = 1;
 
 sub find_nginx_perl () {
 
-    foreach ( './objs/nginx-perl',
-              "$Config{'scriptdir'}/nginx-perl",
+    foreach ( './objs/nginx-perl' ) {
+
+        return $_ 
+              if  -f $_ && 
+                  -x $_;
+    }
+
+
+    # Assuming @INC contains .../Nginx-Perl-N.N.N.N/blib/lib
+    # it might have objs/nginx-perl there somewhere
+
+    foreach my $inc ( @INC ) {
+
+        local $_ = $inc;
+
+        s!/+blib/+lib/*$!!;
+        s!/+blib/+arch/*$!!;
+
+        if ( -f "$_/objs/nginx-perl" &&
+             -x "$_/objs/nginx-perl"    ) {
+
+            my $x = "$_/objs/nginx-perl";
+
+            $x = "./$x"  unless $x =~ m!^/|^\./!; 
+
+            return $x;
+        }
+    }
+
+
+    foreach ( "$Config{'scriptdir'}/nginx-perl",
               "$Config{'sitescript'}/nginx-perl",
               "$Config{'vendorscript'}/nginx-perl",
               "$Config{'installscript'}/nginx-perl",
@@ -309,11 +339,29 @@ sub http_get ($$$) {
 }
 
 
+sub get_nginx_incs ($$) {
+    my ($nginx, $path) = @_;
+    my $prefix = '';
+
+    if ($path !~ m!^/!) {
+        $path =~ s!/+$!!;
+        $prefix = join '/', map { '..' } split /\/+/, $path;
+    }
+    
+    return map {  m!^/! ? $_ : "$prefix/$_"  } 
+             ('blib/lib', 'blib/arch', @INC);
+}
+
+
 sub fork_nginx_handler_die ($$$$) {
     my ($nginx, $path, $conf, $code) = @_;
 
     my $port = get_unused_port
         or die "Cannot get unused port";
+
+    my $incs = join "\n", 
+                 map { "perl_inc \"$_\";" } 
+                   get_nginx_incs ($nginx, $path);
 
     prepare_nginx_dir_die $path, <<"    ENDCONF", <<"    ENDPKG";
 
@@ -330,15 +378,7 @@ sub fork_nginx_handler_die ($$$$) {
         http {
             default_type  text/plain;
 
-            perl_inc  ../../../blib/lib;
-            perl_inc  ../../../blib/arch;
-            perl_inc  ../../blib/lib;
-            perl_inc  ../../blib/arch;
-            perl_inc  ../blib/lib;
-            perl_inc  ../blib/arch;
-
-            perl_inc  ../../objs/src/http/modules/perl/blib/lib;
-            perl_inc  ../../objs/src/http/modules/perl/blib/arch;
+$incs
 
             perl_inc  lib;
             perl_inc  ../lib;
@@ -566,6 +606,10 @@ Forks sub in a child process. Dies on errors.
     ...
      
     undef $child;
+
+=head3 C<< @incs = get_nginx_incs $nginx, $dir; >>
+
+Generates proper C<@INC> to use in F<nginx-perl.conf> during tests.
 
 =head3 C<< ($child, $peer) = fork_nginx_handler_dir $nginx, $dir, $conf, $code; >>
 
