@@ -26,6 +26,13 @@ push @args,
 push @args,
     '--with-perl=' . $^X;
 
+
+# ignoring MakeMaker's options
+
+shift @ARGV
+    while  @ARGV && $ARGV[0] !~ /^--/; 
+
+
 exec './configure', @args, @ARGV;
 
 
