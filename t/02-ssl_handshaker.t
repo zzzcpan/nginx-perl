@@ -133,7 +133,8 @@ plan 'no_plan';
     END
 
 
-    wait_for_peer $peer, 2;
+    wait_for_peer $peer, 5
+        or diag "wair_for_peer \"$peer\" failed\n";
 
 
     for my $i (1 .. 2) {
