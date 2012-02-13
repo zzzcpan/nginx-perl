@@ -3,6 +3,8 @@ package Nginx;
 use strict;
 use warnings;
 
+our $VERSION = '1.1.14.1';
+
 require Exporter;
 our @ISA    = qw(Exporter);
 our @EXPORT = qw(
@@ -100,8 +102,6 @@ our @EXPORT = qw(
     HTTP_GATEWAY_TIME_OUT
     HTTP_INSUFFICIENT_STORAGE
 );
-
-our $VERSION = '1.1.13.1';
 
 require XSLoader;
 XSLoader::load('Nginx', $VERSION);

@@ -1,6 +1,7 @@
 
 /*
  * Copyright (C) Igor Sysoev, Alexandr Gomoliako
+ * Copyright (C) Nginx, Inc.
  */
 
 

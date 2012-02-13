@@ -1,7 +1,12 @@
 
 
+1.1.14.1
+	- merged with nginx-1.1.14;
+	- fix: Makemaker's options caused ./configure to fail;
+1.1.13.1
 	- merged with nginx-1.1.13;
 	- fixed make to use blib/;
+1.1.12.1
 	- merged with nginx-1.1.12;
 	- added tests for internal functions;
 	- added ngx_escape_uri;

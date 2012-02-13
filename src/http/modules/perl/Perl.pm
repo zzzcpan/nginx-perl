@@ -1,6 +1,6 @@
 package Nginx::Perl;
 
-our $VERSION = '1.1.13.1';
+our $VERSION = '1.1.14.1';
 
 
 1;

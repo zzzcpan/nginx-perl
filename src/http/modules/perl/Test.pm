@@ -4,9 +4,10 @@ use strict;
 use warnings;
 no  warnings 'uninitialized';
 
+our $VERSION   = '1.1.14.1';
+
 require Exporter;
 our @ISA       = qw(Exporter);
-our $VERSION   = '1.1.13.1';
 our @EXPORT    = qw( 
 
     find_nginx_perl
