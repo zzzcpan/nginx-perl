@@ -1,5 +1,7 @@
 
 
+1.1.15.1
+	- merged with nginx-1.1.15;
 1.1.14.1
 	- merged with nginx-1.1.14;
 	- fix: Makemaker's options caused ./configure to fail;
