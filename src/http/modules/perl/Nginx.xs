@@ -1338,7 +1338,7 @@ ngx_log_error(errno, message)
 
 SV *
 ngx_timer(after, repeat, cb)
-    PROTOTYPE: $$&
+    PROTOTYPE: $$$
     CODE:
         ngx_connection_t *c;
 
@@ -1363,7 +1363,7 @@ ngx_timer_clear(timer)
 
 SV *
 ngx_connector(address, port, timeout, cb)
-    PROTOTYPE: $$$&
+    PROTOTYPE: $$$$
     CODE:
         ngx_connection_t  *c;
 
@@ -1380,7 +1380,7 @@ ngx_connector(address, port, timeout, cb)
 
 void
 ngx_reader(c, buf, min, max, timeout, cb)
-    PROTOTYPE: $$$$$&
+    PROTOTYPE: $$$$$$
     CODE:
         ngx_connection_t  *c;
 
@@ -1391,7 +1391,7 @@ ngx_reader(c, buf, min, max, timeout, cb)
 
 void
 ngx_writer(c, buf, timeout, cb)
-    PROTOTYPE: $$$&
+    PROTOTYPE: $$$$
     CODE:
         ngx_connection_t  *c;
 
@@ -1455,7 +1455,7 @@ ngx_resolver(name, timeout, cb)
 
 void
 ngx_ssl_handshaker(c, timeout, cb)
-    PROTOTYPE: $$&
+    PROTOTYPE: $$$
     CODE:
         ngx_connection_t  *c;
 
