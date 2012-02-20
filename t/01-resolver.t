@@ -106,13 +106,19 @@ plan 'no_plan';
             or  diag ("errno = $headers->{'x-errno'}");
     }
 
-    for my $i (1 .. 2) {
-        my ($body, $headers) = http_get $peer, '/?nonexistent.domain', 2;
 
-        isnt $headers->{'x-errno'}->[0], 0 , "nonexistent errno"
-            or  diag ("body = $body\n", cat_nginx_logs $dir),
-                  last;
-    }
+    # Some nameservers configured to respond succesfully 
+    # for nonexistent domain queries:
+    # 
+    # www.cpantesters.org/cpan/report/8e8da360-5b3d-11e1-905e-bef26d82c184
+
+    # for my $i (1 .. 2) {
+    #     my ($body, $headers) = http_get $peer, '/?nonexistent.domain', 2;
+    # 
+    #     isnt $headers->{'x-errno'}->[0], 0 , "nonexistent errno"
+    #         or  diag ("body = $body\n", cat_nginx_logs $dir),
+    #               last;
+    # }
 
     undef $child;
 }
