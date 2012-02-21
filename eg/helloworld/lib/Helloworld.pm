@@ -7,7 +7,6 @@ no  warnings 'uninitialized';
 use Sys::Hostname;
 
 use Nginx;
-use Nginx::Util;
 
 our $NAME = 'unnamed';
 
