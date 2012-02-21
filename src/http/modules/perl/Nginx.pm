@@ -684,6 +684,11 @@ return from current handler and continue in the new one.
         ...
     }
 
+=head3 C<< $r->preread >>
+
+Returns part of the body already present in the header's buffer or undef
+otherwise. 
+
 =head3 C<< $r->request_body >>
 
 Returns request body if it is stored in memory or undef otherwise.

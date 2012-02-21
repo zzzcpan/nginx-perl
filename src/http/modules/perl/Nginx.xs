@@ -517,6 +517,26 @@ has_request_body(r, next)
 
 
 void
+preread(r)
+    CODE:
+        dXSTARG;
+        ngx_http_request_t  *r;
+        size_t               len;
+
+        ngx_http_perl_set_request(r);
+
+        len = r->header_in->last - r->header_in->pos;
+
+        if (len == 0) {
+            XSRETURN_UNDEF;
+        }
+
+        ngx_http_perl_set_targ(r->header_in->pos, len);
+
+        ST(0) = TARG;
+
+
+void
 request_body(r)
     CODE:
         dXSTARG;
