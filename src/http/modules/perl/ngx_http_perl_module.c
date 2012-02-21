@@ -2347,6 +2347,11 @@ ngx_perl_read(ngx_connection_t *c)
     c->read->handler  = ngx_perl_read_handler;
     c->write->handler = ngx_perl_dummy_handler;
 
+    if (c->read->ready) {
+        c->read->handler(c->read);
+        return;
+    }
+
     if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
 
         if (c->read->error == 0) 
@@ -2397,6 +2402,11 @@ ngx_perl_write(ngx_connection_t *c)
 
     c->read->handler  = ngx_perl_dummy_handler;
     c->write->handler = ngx_perl_write_handler;
+
+    if (c->write->ready) {
+        c->write->handler(c->write);
+        return;
+    }
 
     if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
 
