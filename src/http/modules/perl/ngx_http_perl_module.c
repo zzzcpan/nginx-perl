@@ -2834,6 +2834,11 @@ AGAIN:
 
     sv = plc->write_buffer;
 
+    if (SvTYPE (sv) != SVt_PV || SvCUR (sv) <= 0) {
+        errno = 0;
+        goto CALLBACK;
+    }
+
     for ( ;; ) {
 
         ngx_socket_errno = 0;
