@@ -23,6 +23,19 @@ push @args,
                 $Config{sitebin}           ||
                 $Config{sitescript}           ;
 
+
+my @PCRE_INCLUDE = 
+     grep { -e "$_/pcre.h" } 
+       qw( /usr/include
+           /usr/local/include
+           /usr/pkg/include
+           /use/include/pcre
+           /opt/local/include );
+
+push @args, '--with-pcre=pcre' 
+        if  -e 'pcre' && !@PCRE_INCLUDE;
+
+
 push @args,
     '--with-perl=' . $^X;
 
