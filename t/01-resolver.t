@@ -13,6 +13,7 @@ use Socket;
 
 my $nginx = find_nginx_perl;
 my $dir   = "objs/t01";
+mkdir "objs" unless -e "objs";
 
 plan skip_all => "Can't find executable binary ($nginx) to test"
         if  !$nginx    ||  
