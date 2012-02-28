@@ -21,6 +21,8 @@ push @args, '--sbin-path=' . ( $Config{installsitebin}    ||
                                $Config{sitebin}           ||
                                $Config{sitescript}           ;
 
+# disabling pcre / building statically for automatic testing
+
 my @PCRE_INCLUDE = 
      grep { -e "$_/pcre.h" } 
        qw( /usr/include
@@ -29,10 +31,32 @@ my @PCRE_INCLUDE =
            /use/include/pcre
            /opt/local/include );
 
-mkdir 'pcre/m4', # weird
 push @args, '--with-pcre=pcre' 
         if  -e 'pcre' && !@PCRE_INCLUDE;
 
+push @args, '--without-http_rewrite_module',
+            '--without-pcre'
+        if !-e 'pcre' && !@PCRE_INCLUDE;
+
+
+# disabling zlib / building statically for automatic testing
+
+my @ZLIB_INCLUDE = 
+     grep { -e "$_/zlib.h" } 
+       qw( /usr/include
+           /usr/local/include
+           /usr/pkg/include
+           /use/include/pcre
+           /opt/local/include );
+
+push @args, '--with-zlib=zlib' 
+        if  -e 'pcre' && !@PCRE_INCLUDE;
+
+push @args, '--without-http_gzip_module'
+        if !-e 'zlib' && !@ZLIB_INCLUDE;
+
+
+# our perl interpreter
 
 push @args, '--with-perl=' . $^X;
 
