@@ -40,7 +40,7 @@ $NGX_OBJS/src/http/modules/perl/Makefile:				\
 			LIB=$NGX_PERL_MODULES				\
 			INSTALLSITEMAN3DIR=$NGX_PERL_MODULES_MAN
 
-test:
+test: $NGX_OBJS/nginx-perl
 	PERL_DL_NONLAZY=1 $NGX_PERL "-MExtUtils::Command::MM" "-e" "test_harness(0, 'blib/lib', 'blib/arch')" t/*.t
 
 END
