@@ -8,21 +8,18 @@ use Config;
 
 my @args;
 
-push @args, 
-    '--prefix=' . $Config{siteprefix} . "/nginx-perl" 
-            if  $Config{siteprefix} ;
+push @args, '--prefix=' . $Config{siteprefix} . "/nginx-perl" 
+        if  $Config{siteprefix} ;
 
-push @args, 
-    '--sbin-path=' . ( $Config{installsitebin}    || 
-                       $Config{installsitescript} ||
-                       $Config{sitebin}           ||
-                       $Config{sitescript}           )
+push @args, '--sbin-path=' . ( $Config{installsitebin}    || 
+                               $Config{installsitescript} ||
+                               $Config{sitebin}           ||
+                               $Config{sitescript}           )
 
-            if  $Config{installsitebin}    || 
-                $Config{installsitescript} ||
-                $Config{sitebin}           ||
-                $Config{sitescript}           ;
-
+                           if  $Config{installsitebin}    || 
+                               $Config{installsitescript} ||
+                               $Config{sitebin}           ||
+                               $Config{sitescript}           ;
 
 my @PCRE_INCLUDE = 
      grep { -e "$_/pcre.h" } 
@@ -36,8 +33,7 @@ push @args, '--with-pcre=pcre'
         if  -e 'pcre' && !@PCRE_INCLUDE;
 
 
-push @args,
-    '--with-perl=' . $^X;
+push @args, '--with-perl=' . $^X;
 
 
 # ignoring MakeMaker's options
