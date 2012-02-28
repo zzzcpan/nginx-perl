@@ -29,6 +29,7 @@ my @PCRE_INCLUDE =
            /use/include/pcre
            /opt/local/include );
 
+mkdir 'pcre/m4', # weird
 push @args, '--with-pcre=pcre' 
         if  -e 'pcre' && !@PCRE_INCLUDE;
 
