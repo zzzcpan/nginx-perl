@@ -1,5 +1,14 @@
 
-
+1.1.16.1
+	- merged with nginx-1.1.16;
+	- testing: disabling pcre and zlib for non-humans if not found;
+	- bugfix: make test was failing without make, needed dependecny
+	  on object;
+	- bugfix: prove was failing without make;
+	- bugfix: it was not possible to read POST request with
+	  connection takeover;
+	- new method: $r->preread, useful for connection takeover;
+	- removed anon sub enforcement from prototypes;
 1.1.15.1
 	- merged with nginx-1.1.15;
 1.1.14.1
