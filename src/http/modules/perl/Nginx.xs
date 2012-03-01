@@ -1146,6 +1146,7 @@ take_connection(r)
             XSRETURN_UNDEF;
         }
 
+        r->keepalive = 0;
         r->headers_in.taken = 1;
         RETVAL = newSViv(PTR2IV(r->connection));
     OUTPUT:
