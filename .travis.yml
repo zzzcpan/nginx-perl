@@ -9,3 +9,6 @@ notifications:
       - zzz@cpan.org
     on_success: always
     on_failure: always
+before_install: 
+  - sudo apt-get install libpcre3-dev
+
