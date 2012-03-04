@@ -58,7 +58,7 @@ unless (@ARGV) {
                /opt/local/include );
 
     push @args, '--with-zlib=zlib' 
-            if  -e 'pcre' && !@PCRE_INCLUDE;
+            if  -e 'zlib' && !@ZLIB_INCLUDE;
 
     push @args, '--without-http_gzip_module'
             if !-e 'zlib' && !@ZLIB_INCLUDE;
