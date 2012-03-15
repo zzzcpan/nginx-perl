@@ -4,7 +4,7 @@ use strict;
 use warnings;
 no  warnings 'uninitialized';
 
-our $VERSION   = '1.1.16.1';
+our $VERSION   = '1.1.17.1';
 
 require Exporter;
 our @ISA       = qw(Exporter);

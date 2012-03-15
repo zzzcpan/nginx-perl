@@ -1,4 +1,8 @@
 
+1.1.17.1
+	- merged with nginx-1.1.17;
+	- fixes for travis-ci;
+	- bugfix: typo in zlib detection;
 1.1.16.1
 	- merged with nginx-1.1.16;
 	- testing: disabling pcre and zlib for non-humans if not found;
