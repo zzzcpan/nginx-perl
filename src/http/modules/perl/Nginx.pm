@@ -1257,7 +1257,7 @@ Let's start by defining variables for our simple queueing system:
     our $MAX_ACTIVE_REQUESTS = 4;
     our $ACTIVE_REQUESTS = 0;
 
-Next, creating access handler that does actual queueing:
+Next, let's create an access handler that does actual queueing:
 
     sub access_handler {
         my ($r) = @_;
