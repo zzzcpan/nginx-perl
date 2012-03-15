@@ -1240,6 +1240,74 @@ Check out F<eg/self-sufficient> to see all this in action:
 
     % ./objs/nginx-perl -p eg/self-sufficient
 
+=head1 EXAMPLES
+
+=head2 REQUEST QUEUE
+
+In B<nginx-perl> every request object C<$r> is created and destroyed with 
+nginx's own request. This means, that it is possible to reorder natural
+request flow in any way you want. It can be very helpful in case of DDOS,
+unusual load spikes or anything else you can think of.
+
+Request queuing is going to illustrate this feature.
+
+Let's start by defining variables for our simple queueing system:
+
+    our @QUEUE;
+    our $MAX_ACTIVE_REQUESTS = 4;
+    our $ACTIVE_REQUESTS = 0;
+
+Next, creating access handler that does actual queueing:
+
+    sub access_handler {
+        my ($r) = @_;
+        
+        if ($ACTIVE_REQUESTS < $MAX_ACTIVE_REQUESTS) {
+            $ACTIVE_REQUESTS++;
+            
+            return NGX_OK;
+        } else {
+            $r->log_error(0, "Too many concurrent requests, queueing");
+            
+            push @QUEUE, $r;
+            
+            return NGX_DONE;
+        }
+    }
+
+Simple enough. But now we need a way to process our queue of requests.
+We are going to do this by creating our own destructor for request object.
+Every request object is blessed with C<Nginx> package, so C<Nginx::DESTROY>
+is what we need:
+
+    sub Nginx::DESTROY {
+        if (@QUEUE == 0) {
+            $ACTIVE_REQUESTS--;
+        } else {
+            my $r = shift @QUEUE;
+            
+            $r->log_error(0, "Dequeuing");
+            
+            $r->phase_handler_inc;
+            $r->core_run_phases;
+        }
+    }
+
+That's it. Here's how to use it:
+
+    perl_require  Requestqueue.pm;
+    
+    server {
+        location = /index.html {
+            perl_access  Requestqueue::access_handler;
+        }
+    }
+
+Look for working example in F<eg/>.
+
+Things to remember: access handler can be called multiple times depending
+on your configuration; workers don't share data between each other. 
+
 =head1 SEE ALSO
 
 L<Nginx::Test>, L<Nginx::Util>, L<Nginx::Redis>,
