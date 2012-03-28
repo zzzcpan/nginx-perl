@@ -1,4 +1,7 @@
 
+1.1.18.1 Wed Mar 28 17:33:13 EEST 2012
+	- merged with nginx-1.1.18;
+	- added 2 new examples;
 1.1.17.1
 	- merged with nginx-1.1.17;
 	- fixes for travis-ci;
