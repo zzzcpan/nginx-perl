@@ -294,6 +294,14 @@ sub prepare_nginx_dir_die {
     }
 
     {
+        if ($conf =~ m/perl/g) { 
+            my $incs = join "\n", 
+                         map { "perl_modules \"$_\";" } 
+                           get_nginx_incs (undef, $dir);
+              # injecting proper @INC
+            $conf =~ s/(\s+http\s*{)/$1\n$incs\n/gs;
+        }
+
         open my $fh, '>', "$dir/conf/nginx-perl.conf"
             or die "Cannot open file '$dir/conf/nginx-perl.conf' " .
                    "for writing: $!";
