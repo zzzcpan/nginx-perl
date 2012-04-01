@@ -90,7 +90,7 @@ our @EXPORT    = qw(
 
 =head1 FUNCTIONS
 
-=head2 C<< find_nginx_perl >>
+=head2 find_nginx_perl
 
 Finds executable binary for F<nginx-perl>. Returns executable path
 or C<undef> if not found.
@@ -151,7 +151,7 @@ sub find_nginx_perl () {
 }
 
 
-=head2 C<< get_unused_port >>
+=head2 get_unused_port
 
 Returns available port number to bind to. Tries to use it first and returns
 C<undef> if fails.
@@ -181,7 +181,7 @@ sub get_unused_port () {
 }
 
 
-=head2 C<< wait_for_peer "$host:$port", $timeout >>
+=head2 wait_for_peer C<< "$host:$port", $timeout >>
 
 Tries to connect to C<$host:$port> within C<$timeout> seconds. Returns C<1>
 on success and C<undef> on error.
@@ -224,7 +224,7 @@ sub wait_for_peer ($$) {
 }
 
 
-=head2 C<< prepare_nginx_dir_die $dir, $conf, $pkg1, $pkg2, ... >>
+=head2 prepare_nginx_dir_die C<< $dir, $conf, @pkgs >>
 
 Creates directory tree suitable to run F<nginx-perl> from. Puts there 
 config and packages specified as string scalars. Dies on errors.
@@ -327,7 +327,7 @@ sub prepare_nginx_dir_die {
 }
 
 
-=head2 C<< cat_nginx_logs $dir >>
+=head2 cat_nginx_logs C<< $dir >>
 
 Returns all logs from C<$dir.'/logs'> as a single scalar. Useful for 
 diagnostics.
@@ -367,7 +367,7 @@ $buf
 }
 
 
-=head2 C<< fork_nginx_die $nginx, $dir >>
+=head2 fork_nginx_die C<< $nginx, $dir >>
 
 Forks F<nginx-perl> using executable binary from C<$nginx> and 
 prepared directory path from C<$dir> and returns guard object. 
@@ -404,7 +404,7 @@ sub fork_nginx_die ($$) {
 }
 
 
-=head2 C<< fork_child_die sub {} >>
+=head2 fork_child_die C<< sub {} >>
 
 Forks sub in a child process and returns its guard object. Dies on errors.
 
@@ -434,7 +434,7 @@ sub fork_child_die (&) {
     return Nginx::Test::Child->new ($pid);
 }
 
-=head2 C<< get_nginx_conf_args_dir $nginx >>
+=head2 get_nginx_conf_args_dir C<< $nginx >>
 
 Runs C<nginx-perl -V>, parses its output and returns a set of keys 
 out of the list of configure arguments. 
@@ -459,7 +459,7 @@ sub get_nginx_conf_args_die ($) {
 }
 
 
-=head2 C<< http_get $peer, $uri, $timeout >>
+=head2 http_get C<< $peer, $uri, $timeout >>
 
 Connects to C<$peer>, sends GET request and return its C<$body> and 
 parsed C<$headers>.
@@ -527,7 +527,7 @@ sub http_get ($$$) {
 }
 
 
-=head2 C<< get_nginx_incs $nginx, $dir >>
+=head2 get_nginx_incs C<< $nginx, $dir >>
 
 Returns proper C<@INC> to use in F<nginx-perl.conf> during tests. 
 
@@ -549,7 +549,7 @@ sub get_nginx_incs ($$) {
 }
 
 
-=head2 C<< fork_nginx_handler_dir $nginx, $dir, $conf, $code >>
+=head2 fork_nginx_handler_dir C<< $nginx, $dir, $conf, $code >>
 
 Gets unused port, prepares directory for nginx with predefined 
 package name, forks nginx and gives you a child object and generated 
