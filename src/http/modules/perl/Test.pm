@@ -104,32 +104,32 @@ sub get_unused_port () {
 sub wait_for_peer ($$) {
     my ($peer, $timeout) = @_;
     my $rv;
+    my $at = time + $timeout;
 
     eval {
-        local $SIG{'ALRM'} = sub {  die "timedout\n";  };
+        local $SIG{'ALRM'} = sub {  die "SIGALRM\n";  };
 
-        alarm $timeout;
+        for (my $t = time ; $at - $t > 0; $t = time) {
+            alarm $at - $t;
 
-        for (1 .. $timeout * 10) {
             my $sock = IO::Socket::INET->new ( Proto     => 'tcp',
                                                PeerAddr  => "$peer",
                                                ReuseAddr => 1        );
+            alarm 0;
+
             unless ($sock) {
                 select ('','','', 0.1);
                 next;
             }
 
             $rv = 1;
-
             $sock->close;
 
-            alarm 0;
             last;
         }
     };
 
     alarm 0;
-
     return $rv;
 }
 
