@@ -277,7 +277,7 @@ config and packages specified as string scalars. Dies on errors.
 sub prepare_nginx_dir_die {
     my ($dir, $conf, @pkgs) = @_;
 
-    foreach ("$dir", "$dir/conf", "$dir/lib", "$dir/logs") {
+    foreach ("$dir", "$dir/conf", "$dir/lib", "$dir/logs", "$dir/html") {
         if (!-e $_) {
             mkdir $_
                 or die "Cannot create directory '$_': $!";
@@ -289,6 +289,14 @@ sub prepare_nginx_dir_die {
 
         open my $fh, '>', "$_/.exists"
             or die "Cannot open file '$_/.exists' for writing: $!";
+        close $fh;
+    }
+
+    {
+        open my $fh, '>', "$dir/html/index.html"
+            or die "Cannot open file '$dir/html/index.html' for writing: $!";
+        binmode $fh;
+        print $fh "ok";
         close $fh;
     }
 
