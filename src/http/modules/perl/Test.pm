@@ -85,12 +85,13 @@ sub get_unused_port () {
     my $port = 50000 + int (rand() * 5000);
 
     while ($port++ < 64000) {
-        my $sock = IO::Socket::INET->new ( Listen    => 5,
-                                           LocalAddr => '127.0.0.1',
-                                           LocalPort => $port,
-                                           Proto     => 'tcp',
-                                           ReuseAddr => 1            )
-                or next;
+        my $sock = IO::Socket::INET->new ( 
+            Listen    => 5,
+            LocalAddr => '127.0.0.1',
+            LocalPort => $port,
+            Proto     => 'tcp',
+            ReuseAddr => 1
+        ) or next;
 
         $sock->close;
         return $port;
