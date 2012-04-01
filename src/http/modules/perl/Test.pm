@@ -621,10 +621,6 @@ sub fork_nginx_handler_die ($$$$) {
     my $port = get_unused_port
         or die "Cannot get unused port";
 
-    my $incs = join "\n", 
-                 map { "perl_inc \"$_\";" } 
-                   get_nginx_incs ($nginx, $path);
-
     prepare_nginx_dir_die $path, <<"    ENDCONF", <<"    ENDPKG";
 
         worker_processes  1;
@@ -639,8 +635,6 @@ sub fork_nginx_handler_die ($$$$) {
 
         http {
             default_type  text/plain;
-
-$incs
 
             perl_inc  lib;
             perl_inc  ../lib;
