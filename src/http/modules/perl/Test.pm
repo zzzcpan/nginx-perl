@@ -9,7 +9,7 @@ Nginx::Test - simple framework for writing tests for nginx-perl and nginx
     use Nginx::Test;
      
     my $nginx = find_nginx_perl;
-    my $dir   = 'tmp/test';
+    my $dir   = make_path 'tmp/test';
     
     my ($child, $peer) = 
         fork_nginx_handler_die  $nginx, $dir, '', <<'END';
@@ -43,6 +43,7 @@ as a dependency for you module and use.
 use strict;
 use warnings;
 no  warnings 'uninitialized';
+use bytes;
 
 our $VERSION   = '1.1.18.1';
 
@@ -64,6 +65,15 @@ sub CRLF { "\x0d\x0a" }
     http_get
     get_nginx_incs
     fork_nginx_handler_die
+    eval_wait_sub
+    connect_peer
+    send_data
+    parse_http_request
+    parse_http_response
+    inject_content_length
+    read_http_response
+    make_path
+    cat_logs
 
 =cut
 
@@ -82,6 +92,15 @@ our @EXPORT    = qw(
     http_get
     get_nginx_incs
     fork_nginx_handler_die
+    eval_wait_sub
+    connect_peer
+    send_data
+    parse_http_request
+    parse_http_response
+    inject_content_length
+    read_http_response
+    make_path
+    cat_logs
 
 );
 
@@ -670,6 +689,417 @@ $code
     return ($pid, $peer);
 }
 
+
+=head2 eval_wait_sub C<< $name, $timeout, $sub >>
+
+Wraps C<eval> block around subroutine C<$sub>, sets alarm to C<$timeout> 
+and waits for sub to finish. Returns undef on alarm and if C<$sub> dies.
+
+    my $rv = eval_wait_sub "test1", 5, sub {
+        ...
+        pass "test1";
+    };
+    
+    fail "test1"  unless $rv;
+
+=cut
+
+sub eval_wait_sub ($$) {
+    my $timeout = shift;
+    my $sub     = shift;
+    my $rv;
+
+    eval {
+        local $SIG{ALRM} = sub { die "SIGALRM\n" };
+        alarm $timeout;
+
+        $rv = &$sub;
+    };
+
+    alarm 0;
+
+    unless ($@) {
+        return $rv;
+    } else {
+      # Test::More::diag "\neval_wait_sub ('$name', $timeout, ...) died: $@\n";
+        return undef;
+    }
+}
+
+
+=head2 connect_peer C<< "$host:$port", $timeout >>
+
+Tries to connect to C<$host:$port> within C<$timeout> seconds.
+Returns socket handle on success or C<undef> otherwise.
+
+    $sock = connect_peer "127.0.0.1:55555", 5
+        or ...;
+
+=cut
+
+sub connect_peer ($$) {
+    my ($peer, $timeout) = @_;
+
+    return eval_wait_sub $timeout, sub {
+        my $sock = IO::Socket::INET->new (PeerAddr => $peer)
+            or die "$!\n";
+
+        $sock->autoflush(1);
+
+        return $sock;
+    };
+}
+
+
+=head2 send_data C<< $sock, $buf, $timeout >>
+
+Sends an entire C<$buf> to the socket C<$sock> in C<$timeout> seconds. 
+Returns amount of data sent on success or undef otherwise. This amount 
+is guessed since C<print> is used to send data.
+
+    send_data $sock, $buf, 5
+        or ...;
+
+=cut
+
+sub send_data ($$$) {
+    my ($sock, undef, $timeout) = @_;
+    my $buf = \$_[1];
+
+    return eval_wait_sub $timeout, sub {
+        print $sock $$buf;
+        return length $$buf;
+    };
+}
+
+
+=head2 parse_http_request C<< $buf, $r >>
+
+Parses HTTP request from C<$buf> and puts parsed data structure into C<$r>. 
+Returns length of the header in bytes on success or C<undef> on error.
+Returns C<0> if cannot find header separator C<"\n\n"> in C<$buf>.
+
+Data returned in the following form:
+
+    $r = { 'connection'    => ['close'],
+           'content-type'  => ['text/html'],
+           ...
+           '_method'       => 'GET',
+           '_request_uri'  => '/?foo=bar',
+           '_version'      => 'HTTP/1.0',
+           '_uri'          => '/',
+           '_query_string' => 'foo=bar',
+           '_keepalive'    => 0              };
+
+Example:
+
+    $len = parse_http_request $buf, $r;
+    
+    if ($len) {
+        # ok
+        substr $buf, 0, $len, '';
+        warn Dumper $r;
+    } elsif (defined $len) {
+        # read more data 
+        # and try again
+    } else {
+        # bad request
+    }
+
+=cut
+
+sub parse_http_request ($$) {
+    my $buf = \$_[0];
+
+    if ($$buf =~ /\x0d\x0a\x0d\x0a/gs || $$buf =~ /\x0a\x0a/gs) {
+        my $header_len = pos($$buf) - length($&);
+        my $sep_len = length($&);
+
+        pos($$buf) = 0; # just in case we want to reparse 
+
+        my @lines = split /^/, substr ($$buf, 0, $header_len);
+
+        return undef  
+              if  @lines < 1;
+
+        my %h;
+        @h{ '_method', 
+            '_request_uri', 
+            '_version'      } = split ' ', shift @lines;
+
+        @h{'_uri', '_query_string'} = split /\?/, $h{_request_uri}, 2;
+
+        map {  
+            my ($key, $value) = split ':', $_, 2;
+
+                $key   =~ s/^\s+//; $key   =~ s/\s+$//;
+                $value =~ s/^\s+//; $value =~ s/\s+$//;
+
+            push @{$h{ lc($key) }}, $value;
+        } @lines;
+
+        if ($h{_version} eq 'HTTP/1.1') {
+            if (!exists $h{connection}) {
+                $h{_keepalive} = 1  
+            } elsif ($h{connection}->[0] !~ /[Cc]lose/) {
+                $h{_keepalive} = 1  
+            }
+        } elsif (exists $h{connection}) {
+            if ($h{connection}->[0] =~ /[Kk]eep-[Aa]live/) {
+                $h{_keepalive} = 1;
+            }
+        }
+
+        $_[1] = \%h;
+        return $header_len + $sep_len;
+    } else {
+        return 0;
+    }
+}
+
+
+=head2 parse_http_response C<< $buf, $r >>
+
+Parses HTTP response from C<$buf> and puts parsed data structure into C<$r>. 
+Returns length of the header in bytes on success or C<undef> on error.
+Returns C<0> if cannot find header separator C<"\n\n"> in C<$buf>.
+
+Data returned in the following form:
+
+    $r = { 'connection'   => ['close'],
+           'content-type' => ['text/html'],
+           ...
+           '_status'      => '404',
+           '_message'     => 'Not Found',
+           '_version'     => 'HTTP/1.0',
+           '_keepalive'   => 0              };
+
+Example:
+
+    $len = parse_http_response $buf, $r;
+    
+    if ($len) {
+        # ok
+        substr $buf, 0, $len, '';
+        warn Dumper $r;
+    } elsif (defined $len) {
+        # read more data 
+        # and try again
+    } else {
+        # bad response
+    }
+
+=cut
+
+sub parse_http_response ($$) {
+    my $buf = \$_[0];
+
+    if ($$buf =~ /\x0d\x0a\x0d\x0a/gs || $$buf =~ /\x0a\x0a/gs) {
+        my $header_len = pos($$buf) - length($&);
+        my $sep_len = length($&);
+
+        pos($$buf) = 0; 
+
+        my @lines = split /^/, substr ($$buf, 0, $header_len);
+
+        return undef
+              if @lines < 1;
+
+        my %h;
+        @h{ '_version', 
+            '_status', 
+            '_message'  } = split ' ', shift (@lines), 3;
+
+        $h{_message} =~ s/\s+$//;
+
+        map {  
+            my ($key, $value) = split ':', $_, 2;
+
+                $key   =~ s/^\s+//; $key   =~ s/\s+$//;
+                $value =~ s/^\s+//; $value =~ s/\s+$//;
+
+            push @{$h{ lc($key) }}, $value;
+        } @lines;
+
+        if ($h{_version} eq 'HTTP/1.1') {
+            if (!exists $h{connection}) {
+                $h{_keepalive} = 1  
+            } elsif ($h{connection}->[0] !~ /[Cc]lose/) {
+                $h{_keepalive} = 1  
+            }
+        } elsif (exists $h{connection}) {
+            if ($h{connection}->[0] =~ /[Kk]eep-[Aa]live/) {
+                $h{_keepalive} = 1;
+            }
+        }
+
+        $_[1] = \%h;
+        return $header_len + $sep_len;
+    } else {
+        return 0;
+    }
+}
+
+
+=head2 inject_content_length C<< $buf >>
+
+Parses HTTP header and inserts B<Content-Length> if needed, assuming
+that C<$buf> contains entire request or response.
+
+    $buf = "PUT /"          ."\x0d\x0a".
+           "Host: foo.bar"  ."\x0d\x0a".
+           ""               ."\x0d\x0a".
+           "hello";
+           
+    inject_content_length $buf;
+
+=cut
+
+sub inject_content_length ($) {
+    my $buf = \$_[0];
+
+    if ($$buf =~ /\x0d\x0a\x0d\x0a/gs) {
+        my $header_len = pos($$buf) - length($&);
+            pos($$buf) = 0;
+        my $sep_len = length($&);
+        my @lines = split /^/, substr ($$buf, 0, $header_len);
+        shift @lines;
+
+        my %h;
+        map {  
+            my ($key, $value) = split ':', $_, 2;
+
+                $key   =~ s/^\s+//; $key   =~ s/\s+$//;
+                $value =~ s/^\s+//; $value =~ s/\s+$//;
+
+            push @{$h{ lc($key) }}, $value;
+        } @lines;
+
+        if (length ($$buf) - $header_len - $sep_len > 0) {
+            if (!exists $h{'content-length'}) {
+                my $len = (length ($$buf) - $header_len - $sep_len);
+                substr $$buf, $header_len + length (CRLF), 0, 
+                   "Content-Length: $len"  .CRLF;
+                return $len;
+            } else {
+                return 0;
+            }
+        } else {
+            return 0;
+        }
+    } else {
+        return undef;
+    }
+}
+
+
+=head2 read_http_response C<< $sock, $h, $timeout >>
+
+Reads and parses HTTP response header from C<$sock> into C<$h>
+within C<$timeout> seconds. 
+Returns true on success or C<undef> on error.
+
+    read_http_response $sock, $h, 5
+        or ...;
+
+=cut
+
+sub read_http_response ($$$$) {
+    my ($sock, undef, undef, $timeout) = @_;
+    my $buf = \$_[1];
+    my $h   = \$_[2];
+
+    return eval_wait_sub $timeout, sub {
+        local $/ = CRLF.CRLF; 
+        $$buf = <$sock>;
+
+        parse_http_response $$buf, $$h
+            or return undef;
+
+        $$buf = '';
+        my $len = $$h->{'content-length'} ? $$h->{'content-length'}->[0] : 0;
+
+        if ($len) {
+            local $/ = \$len;
+            $$buf = <$sock>;
+        }
+
+        return 1;
+    };
+}
+
+
+=head2 make_path C<< $path >>
+
+Creates directory tree specified by C<$path> and returns this path 
+or undef on error. 
+
+    $path = make_path 'tmp/foo'
+        or die "Can't create tmp/foo: $!\n";
+
+=cut
+
+sub make_path ($) {
+    my $path = shift;
+    my @dirs = split /[\/\\]+/, $path;
+    my $dir;
+
+    pop @dirs  if @dirs && $dirs[-1] eq '';
+
+    foreach (@dirs) {
+        $dir .= "$_";
+
+        if ($dir) {
+            if (!-e $dir) {
+                mkdir $dir
+                    or return undef;
+            }
+        }
+
+        $dir .= '/';
+    }
+
+    return $path;
+}
+
+
+=head2 cat_logs C<< $dir >>
+
+Scans directory C<$dir> for logs, concatenates them and returns.
+
+    diag cat_logs $dir;
+
+=cut
+
+sub cat_logs ($) {
+    my ($dir) = @_;
+    my $out;
+
+    opendir my $d, $dir
+        or return undef;
+
+    my @FILES = grep { ($_ ne '.' && $_ ne '..' && $_ ne '.exists') && 
+                        -f "$dir/$_" } 
+                  readdir $d;
+    closedir $d;
+
+    foreach (@FILES) {
+
+        my $buf = do { open my $fh, '<', "$dir/$_"; local $/; <$fh> };
+
+        $out .= <<"        EOF";
+
+$dir/$_:
+------------------------------------------------------------------
+$buf
+------------------------------------------------------------------
+
+
+        EOF
+    }
+
+    return $out;
+}
 
 
 =head1 AUTHOR
