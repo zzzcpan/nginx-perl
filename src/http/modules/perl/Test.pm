@@ -2,7 +2,7 @@ package Nginx::Test;
 
 =head1 NAME
 
-Nginx::Test - simple framework for writing tests for nginx-perl and nginx
+Nginx::Test - testing framework for nginx-perl and nginx
 
 =head1 SYNOPSIS
 
