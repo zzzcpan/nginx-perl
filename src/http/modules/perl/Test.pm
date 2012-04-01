@@ -50,8 +50,6 @@ use Config;
 use IO::Socket;
 sub CRLF { "\x0d\x0a" }
 
-$Nginx::Test::PARENT = 1;
-
 
 =head1 EXPORT
 
@@ -388,6 +386,32 @@ Dies on errors. Internally does something like this: C<"$nginx -p $dir">
 
 =cut
 
+{
+    package Nginx::Test::Child;
+
+    sub new {
+        my $class = shift;
+        my $pid   = shift;
+        my $self  = \$pid;
+
+        bless $self, $class;
+    }
+
+    sub terminate {
+        my $self = shift;
+
+        unless ($Nginx::Test::Child::IS_CHILD) {
+            if ($$self) {
+                kill 'TERM', $$self;  $$self = 0; 
+                wait;
+                select '','','', 0.1;
+            }
+        }
+    }
+
+    sub DESTROY { my $self = shift; $self->terminate; }
+}
+
 sub fork_nginx_die ($$) {
     my ($nginx, $path) = @_;
     my $pid = fork();
@@ -396,7 +420,7 @@ sub fork_nginx_die ($$) {
             if  !defined $pid;
 
     if ($pid == 0) {
-        $Nginx::Test::PARENT = 0;
+        $Nginx::Test::Child::IS_CHILD = 1;
 
         open STDOUT, '>', "$path/logs/stdout.log"
             or die "Cannot open file '$path/logs/stdout.log' for writing: $!";
@@ -433,7 +457,7 @@ sub fork_child_die (&) {
             if  !defined $pid;
 
     if ($pid == 0) {
-        $Nginx::Test::PARENT = 0;
+        $Nginx::Test::Child::IS_CHILD = 1;
 
         &$cb;
         exit;
@@ -657,43 +681,6 @@ $code
 }
 
 
-1;
-package Nginx::Test::Child;
-
-
-sub new {
-    my $class = shift;
-    my $pid   = shift;
-    my $self  = \$pid;
-
-    bless $self, $class;
-}
-
-
-sub terminate {
-    my $self = shift;
-
-    if ($$self && $Nginx::Test::PARENT) {
-        kill 'TERM', $$self;
-        $$self = 0;
-        wait;
-
-        select '','','', 0.1;
-    }
-}
-
-
-sub DESTROY {
-    my $self = shift;
-
-    if ($$self && $Nginx::Test::PARENT) {
-        kill 'TERM', $$self;
-        $$self = 0;
-        wait;
-
-        select '','','', 0.1;
-    }
-}
 
 =head1 AUTHOR
 
