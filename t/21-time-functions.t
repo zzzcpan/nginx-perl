@@ -10,7 +10,7 @@ use Test::More;
 use Nginx::Test;
 use constant { CRLF => "\x0d\x0a" };
 
-my $prefix = make_path 'objs/t07'
+my $prefix = make_path 'objs/t21'
     or diag ("make_path failed: $!"),
         plan ('skip_all', "Cannot create test directory: $!");
 
