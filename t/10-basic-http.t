@@ -165,7 +165,7 @@ plan 'no_plan';
                 "HTTP/1.1 200 OK"                               .CRLF.
                 "Connection: close"                             .CRLF.
                 ""                                              .CRLF.
-                "Ok",  # default in html/index.html
+                "ok",  # default in html/index.html
         ],
 
         [
@@ -223,8 +223,8 @@ plan 'no_plan';
                           diag (cat_logs "$prefix/logs"),
                            last LOOP;
 
-                my ($local);
-                parse_http_response $response, $local,
+                my ($local, $local_hlen);
+                $local_hlen = parse_http_response $response, $local,
                     or fail ($test), diag ("parse_http_response failed"),
                         diag ("Request: \n$request\n"),
                          diag ("Expected response: \n$response\n"),
@@ -239,7 +239,7 @@ plan 'no_plan';
                 my $local_buf;
                 my $len = $local->{'content-length'}
                             ? $local->{'content-length'}->[0] : 0;
-                if ($len) { local $/ = \$len; $local_buf = <$sock>; }
+                if ($len) { $local_buf = substr $response, $local_hlen }
 
                 if ($local_buf ne '') {
                     if ($local_buf ne $remote_buf) {
