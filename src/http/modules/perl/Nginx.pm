@@ -442,18 +442,19 @@ Which means there is no need to call $r->has_request_body there.
 
 =head1 INTERNAL FUNCTIONS
 
-=head3 C<< $uri = ngx_escape_uri $src_uri, $type >>;
+=head3 C<< ngx_escape_uri $uri, $type >>;
 
-Escapes C<$src_uri> using internal C<ngx_escape_uri> function from 
+Escapes C<$uri> using internal function ngx_escape_uri() from 
 F<src/core/ngx_string.c>. If C<$type> is specified, uses it or 
-NGX_ESCAPE_URI otherwise.
+NGX_ESCAPE_URI otherwise. Returns escaped uri on success or 
+undef on error;
 
     my $foo = ngx_escape_uri 'a b';
       # gives 'a%20b'
     
     my $foo = ngx_escape_uri 'a b', NGX_ESCAPE_URI;
 
-Type defines what characters to escape. 
+Type defines what characters to escape:
 
     NGX_ESCAPE_URI                " ", "#", "%", "?", 
                                   %00-%1F, %7F-%FF

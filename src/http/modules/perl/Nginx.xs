@@ -1278,6 +1278,10 @@ ngx_escape_uri(uri, ...)
         uintptr_t   n; 
         ngx_uint_t  t;
         
+        if (!SvOK(ST(0))) {
+            XSRETURN_UNDEF;
+        }
+
         src = (u_char *) SvPV_nolen(ST(0));
         
         if (items == 1) {
