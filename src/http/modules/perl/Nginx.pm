@@ -9,6 +9,9 @@ require Exporter;
 our @ISA    = qw(Exporter);
 our @EXPORT = qw(
 
+    ngx_http_time
+    ngx_http_cookie_time
+    ngx_http_parse_time
     ngx_escape_uri
     ngx_prefix
     ngx_conf_prefix
@@ -468,6 +471,32 @@ Type defines what characters to escape.
                                   %00-%1F, %7F-%FF
                                  
     NGX_ESCAPE_MEMCACHED          " ", "%", %00-%1F
+
+=head3 C<< ngx_http_time $time >>
+
+Returns C<$time> in HTTP format. Uses internal function ngx_http_time()
+from F<src/core/ngx_times.c>.
+
+    my $tomorrow = ngx_http_time time + 86400;
+        # $tomorrow = 'Tue, 03 Apr 2012 20:14:41 GMT';
+
+=head3 C<< ngx_http_cookie_time $time >>
+
+Returns C<$time> in HTTP format suitable for Set-Cookie header. Uses 
+internal function ngx_http_cookie_time() from F<src/core/ngx_times.c>.
+
+    my $tomorrow = ngx_http_time time + 86400;
+        # $tomorrow = 'Tue, 03-Apr-12 20:14:41 GMT';
+
+=head3 C<< ngx_http_parse_time $str >>
+
+Parses C<$str> and returns timestamp. On error returns C<undef>. Uses
+internal function ngx_http_parse_time() from F<src/http/ngx_http_parse_time.c>.
+
+    my $time = ngx_http_parse_time "Thu, 01 Jan 1970 00:00:00 GMT"
+        or die "Cannot parse time\n";
+    
+          # $time = '0'
 
 =head1 HTTP API
 

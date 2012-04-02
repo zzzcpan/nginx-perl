@@ -1302,6 +1302,67 @@ ngx_escape_uri(uri, ...)
 
 
 SV *
+ngx_http_time(time)
+    PROTOTYPE: $
+    CODE:
+        SV      *sv;
+        u_char  *dst, *p;
+
+        sv = newSV (32);
+        SvPOK_on (sv);
+        dst = (u_char *) SvPVX(sv);
+
+        p = ngx_http_time (dst, SvOK(ST(0)) ? SvIV(ST(0)) : 0);
+
+        SvCUR_set (sv, p - dst);
+
+        RETVAL = sv;
+    OUTPUT:
+        RETVAL
+
+
+SV *
+ngx_http_cookie_time(time)
+    PROTOTYPE: $
+    CODE:
+        SV      *sv;
+        u_char  *dst, *p;
+
+        sv = newSV (32);
+        SvPOK_on (sv);
+        dst = (u_char *) SvPVX(sv);
+
+        p = ngx_http_cookie_time (dst, SvOK(ST(0)) ? SvIV(ST(0)) : 0);
+
+        SvCUR_set (sv, p - dst);
+
+        RETVAL = sv;
+    OUTPUT:
+        RETVAL
+
+
+SV *
+ngx_http_parse_time(str)
+    PROTOTYPE: $
+    CODE:
+        time_t  t;
+
+        if (!SvOK(ST(0)) || !SvPOK(ST(0)) || SvCUR(ST(0)) < 9) { 
+            XSRETURN_UNDEF;
+        }
+
+        t = ngx_http_parse_time ((u_char *) SvPV_nolen(ST(0)), SvCUR(ST(0)));
+
+        if (t == NGX_ERROR) {
+            XSRETURN_UNDEF;
+        }
+       
+        RETVAL = newSViv(t);
+    OUTPUT:
+        RETVAL
+
+
+SV *
 ngx_prefix()
     ALIAS:
         ngx_conf_prefix = 1
