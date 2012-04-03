@@ -2784,9 +2784,10 @@ CALLBACK:
             ngx_perl_close(c);
             break;
         case NGX_PERL_READ:
-            ngx_perl_read(c);
             if (c->read->ready) {
                 goto AGAIN;
+            } else {
+                ngx_perl_read(c);
             }
             break;
         case NGX_PERL_WRITE:
@@ -2937,9 +2938,10 @@ CALLBACK:
             ngx_perl_read(c);
             break;
         case NGX_PERL_WRITE:
-            ngx_perl_write(c);
             if (c->write->ready) {
                 goto AGAIN;
+            } else {
+                ngx_perl_write(c);
             }
             break;
         case NGX_PERL_SSL_HANDSHAKE:
