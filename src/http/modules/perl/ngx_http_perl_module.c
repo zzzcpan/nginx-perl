@@ -2602,15 +2602,9 @@ CALLBACK:
             break;
         case NGX_PERL_READ:
             ngx_perl_read(c);
-            if (c->read->ready) {
-                c->read->handler(c->read);
-            }
             break;
         case NGX_PERL_WRITE:
             ngx_perl_write(c);
-            if (c->write->ready) {
-                c->write->handler(c->write);
-            }
             break;
         case NGX_PERL_SSL_HANDSHAKE:
 #if (NGX_HTTP_SSL)
@@ -2792,9 +2786,6 @@ CALLBACK:
             break;
         case NGX_PERL_WRITE:
             ngx_perl_write(c);
-            if (c->write->ready) {
-                c->write->handler(c->write);
-            }
             break;
         case NGX_PERL_SSL_HANDSHAKE:
 #if (NGX_HTTP_SSL)
@@ -3044,15 +3035,9 @@ CALLBACK:
             break;
         case NGX_PERL_READ:
             ngx_perl_read(c);
-            if (c->read->ready) {
-                c->read->handler(c->read);
-            }
             break;
         case NGX_PERL_WRITE:
             ngx_perl_write(c);
-            if (c->write->ready) {
-                c->write->handler(c->write);
-            }
             break;
         case NGX_PERL_SSL_HANDSHAKE:
             ngx_perl_ssl_handshake(c);
