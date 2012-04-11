@@ -817,9 +817,9 @@ Example:
 sub parse_http_request ($$) {
     my $buf = \$_[0];
 
-    if ($$buf =~ /\x0d\x0a\x0d\x0a/gs || $$buf =~ /\x0a\x0a/gs) {
-        my $header_len = pos($$buf) - length($&);
-        my $sep_len = length($&);
+    if ($$buf =~ /(\x0d\x0a\x0d\x0a)/gs || $$buf =~ /(\x0a\x0a)/gs) {
+        my $header_len = pos($$buf) - length($1);
+        my $sep_len = length($1);
 
         pos($$buf) = 0; # just in case we want to reparse 
 
@@ -900,9 +900,9 @@ Example:
 sub parse_http_response ($$) {
     my $buf = \$_[0];
 
-    if ($$buf =~ /\x0d\x0a\x0d\x0a/gs || $$buf =~ /\x0a\x0a/gs) {
-        my $header_len = pos($$buf) - length($&);
-        my $sep_len = length($&);
+    if ($$buf =~ /(\x0d\x0a\x0d\x0a)/gs || $$buf =~ /(\x0a\x0a)/gs) {
+        my $header_len = pos($$buf) - length($1);
+        my $sep_len = length($1);
 
         pos($$buf) = 0; 
 
@@ -964,10 +964,10 @@ that C<$buf> contains entire request or response.
 sub inject_content_length ($) {
     my $buf = \$_[0];
 
-    if ($$buf =~ /\x0d\x0a\x0d\x0a/gs) {
-        my $header_len = pos($$buf) - length($&);
+    if ($$buf =~ /(\x0d\x0a\x0d\x0a)/gs) {
+        my $header_len = pos($$buf) - length($1);
             pos($$buf) = 0;
-        my $sep_len = length($&);
+        my $sep_len = length($1);
         my @lines = split /^/, substr ($$buf, 0, $header_len);
         shift @lines;
 
