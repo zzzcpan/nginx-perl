@@ -3,7 +3,7 @@ package Nginx;
 use strict;
 use warnings;
 
-our $VERSION = '1.1.18.2';
+our $VERSION = '1.1.19.2';
 
 require Exporter;
 our @ISA    = qw(Exporter);

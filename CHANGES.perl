@@ -1,4 +1,7 @@
 
+1.1.19.2 Thu Apr 12 16:36:54 EEST 2012
+	- merged with nginx-1.1.19;
+
 1.1.18.2 Thu Apr 12 16:11:09 EEST 2012
 	- improved Nginx::Test, more tests;
 	- added ngx_http_time, ngx_http_cookie_time, ngx_http_parse_time;
