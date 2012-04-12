@@ -33,7 +33,11 @@ ngx_daemon(ngx_log_t *log)
         return NGX_ERROR;
     }
 
+/* umask(0) makes perl programs insecure by default,
+ * we don't need that */
+#if 0
     umask(0);
+#endif
 
     fd = open("/dev/null", O_RDWR);
     if (fd == -1) {
