@@ -1,4 +1,11 @@
 
+1.1.18.2 Thu Apr 12 16:11:09 EEST 2012
+	- improved Nginx::Test, more tests;
+	- added ngx_http_time, ngx_http_cookie_time, ngx_http_parse_time;
+	- fixed uninitialized check in ngx_escape_uri, covered in t/05;
+	- bugfix: handler was called twice in a row in loop mode
+	  in ngx_reader and ngx_writer;
+
 1.1.18.1 Wed Mar 28 17:33:13 EEST 2012
 	- merged with nginx-1.1.18;
 	- added 2 new examples;
