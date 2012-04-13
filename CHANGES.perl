@@ -1,4 +1,8 @@
 
+1.1.19.3 Fri Apr 13 04:44:11 EEST 2012
+	- fixed broken tests;
+	- disabled umask(0) in daemon mode;
+
 1.1.19.2 Thu Apr 12 16:36:54 EEST 2012
 	- merged with nginx-1.1.19;
 

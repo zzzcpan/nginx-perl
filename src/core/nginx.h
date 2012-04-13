@@ -10,7 +10,7 @@
 
 
 #define nginx_version      1001019
-#define NGINX_VERSION      "1.1.19.2"
+#define NGINX_VERSION      "1.1.19.3"
 #define NGINX_VER          "nginx-perl/" NGINX_VERSION
 
 #define NGINX_VAR          "NGINX"
