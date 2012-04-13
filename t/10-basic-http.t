@@ -49,7 +49,7 @@ plan 'no_plan';
                 listen  $peer;
 
                 location = /index.html { }
-                location = /error503 { return 503; }
+                location = /error503 { error_page 404 =503 /index.html; }
             }
         }
 
