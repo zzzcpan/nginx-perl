@@ -62,24 +62,26 @@ plan 'no_plan';
             perl_inc lib;
             perl_require NginxTst.pm;
 
+            perl_eval ' \$NginxTst::peer2 = "$peer2"; ';
+            perl_eval ' \$NginxTst::peer3 = "$peer3"; ';
+
             server {
                 listen  $peer;
 
                 location / { 
-                    set \$backend "$peer2";
-                    perl_handler NginxTst::handler; 
+                    perl_handler NginxTst::handler_peer2; 
                 }
 
                 location = /timeout { 
-                    set \$backend "$peer3";
-                    perl_handler NginxTst::handler; 
+                    perl_handler NginxTst::handler_peer3; 
                 }
             }
 
             server {
                 listen  $peer2;
 
-                location = /err503   { return 503; }
+                location = /index.html { }
+                location = /err503   { error_page 404 =503 /index.html; }
                 location   /junk     { perl_handler NginxTst::junk; }
                 location   /         { perl_handler NginxTst::generator; }
                 location   /breaking { perl_handler NginxTst::breaking; }
@@ -349,7 +351,6 @@ sub http ($$$$$$) {
             return NGX_DONE;
         }
 
-
         sub handler {
             my ($r) = @_;
             $r->main_count_inc;
@@ -381,6 +382,21 @@ sub http ($$$$$$) {
             };
 
             return NGX_DONE;
+        }
+
+        our $peer2;
+        our $peer3;
+
+        sub handler_peer2 {
+            my ($r) = @_;
+            $r->variable("backend", $peer2);
+            &handler;
+        }
+
+        sub handler_peer3 {
+            my ($r) = @_;
+            $r->variable("backend", $peer3);
+            &handler;
         }
 
         1;
