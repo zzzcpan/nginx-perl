@@ -171,7 +171,9 @@ my $nginx = find_nginx_perl
 
                 ok $t && $t == $time, 
                    "ngx_http_parse_time: basic"
-                        or diag "t = '$t', time = '$time'";
+                        or diag ("t = '$t', time = '$time'"), 
+                            diag ('ngx_http_time($time) = '.
+                                              ngx_http_time($time));
 
             $t = ngx_http_parse_time ngx_http_cookie_time($time);
 
