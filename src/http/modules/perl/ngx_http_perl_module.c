@@ -4,6 +4,12 @@
  * Copyright (C) Nginx, Inc.
  */
 
+/* TODO
+    - fix debug messages;
+    - cleanup reader/writer, avoid ngx_perl_read/write for AGAIN calls, 
+      inline timers;
+*/
+
 
 #include <ngx_config.h>
 #include <ngx_core.h>
