@@ -228,35 +228,22 @@ $buf = <<'TMPL';
 
     /* ops */
 
-    function cdown (z) {
-        var x = z[0];
-        var y = z[1];
+    var xx;
+    var yy;
 
-        cx.strokeStyle = "#ffffff";
-        cx.lineJoin = "round";
-        cx.lineWidth = 2;
-        cx.beginPath();
-        cx.moveTo(x, y);
-    }
+    cx.strokeStyle = "#ffffff";
+    cx.lineJoin = "round";
+    cx.lineWidth = 2;
 
     function cclear (z) {
         cx.fillStyle = "#228800";
         cx.fillRect(0, 0, c.width, c.height);
     }
 
-    function cmove (z) {
-        var x = z[0];
-        var y = z[1];
-
-        cx.lineTo(x, y);
-        cx.stroke();
-    }
-
-    function cup (z) {
-        var x = z[0];
-        var y = z[1];
-
-        cx.lineTo(x, y);
+    function cline (z) {
+        cx.beginPath();
+        cx.moveTo(z[0], z[1]);
+        cx.lineTo(z[2], z[3]);
         cx.stroke();
         cx.closePath();
     }
@@ -298,10 +285,8 @@ $buf = <<'TMPL';
     }
 
     var cops = new Object();
-    cops["cdown"]       = cdown;
     cops["cclear"]      = cclear;
-    cops["cmove"]       = cmove;
-    cops["cup"]         = cup;
+    cops["cline"]       = cline;
     cops["cpoint"]      = cpoint;
     cops["cdisconnect"] = cdisconnect;
 
@@ -316,10 +301,10 @@ $buf = <<'TMPL';
 
         ev.preventDefault();
 
-        if (x > 5 && y > 5) {
+        if (x > 5 || y > 5) {
             mdown = 1;
-            cdown([x, y]);
-            send("cdown", [x, y]);
+            xx = x;
+            yy = y;
         } else {
             cclear([]);
             send("cclear", []);
@@ -333,8 +318,10 @@ $buf = <<'TMPL';
         ev.preventDefault();
 
         if (mdown) {
-            cmove([x, y]);
-            send("cmove", [x, y]);
+            cline([xx, yy, x, y]);
+            send("cline", [xx, yy, x, y]);
+            xx = x;
+            yy = y;
         } else {
             send("cpoint", [x, y]);
         }
@@ -348,8 +335,7 @@ $buf = <<'TMPL';
 
         if (mdown) {
             mdown = 0;
-            cup([x, y]);
-            send("cup", [x, y]);
+            send("cline", [xx, yy, x, y]);
         }
     }
 
