@@ -109,7 +109,7 @@ sub websocket_handler {
                     }
                 }
                 return NGX_READ;
-            } elsif (defined $len) {
+            } elsif (defined $len && length($rbuf) < 262144) {
                 return NGX_READ;
             } else {
                 # broadcasting disconnect
