@@ -497,7 +497,7 @@ sub append_ws_frame_v13 ($$) {
     my $h;
 
     $c0  = $opcode;
-    $c0 |= 0x80  if $fin;
+    $c0  = $c0 | 0x80  if $fin;
 
     $h .= pack "C", $c0;
 
