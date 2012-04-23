@@ -1518,9 +1518,6 @@ ngx_write(c)
         c = INT2PTR(ngx_connection_t *, SvIV(ST(0)));
 
         ngx_perl_write(c);
-        if (c->write->ready) {
-            c->write->handler(c->write);
-        }
 
 
 void
