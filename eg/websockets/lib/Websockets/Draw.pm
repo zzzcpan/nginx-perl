@@ -301,6 +301,10 @@ $buf = <<'TMPL';
 
         ev.preventDefault();
 
+        if (ev.which && ev.which != 1) {
+            return;
+        }
+
         if (x > 5 || y > 5) {
             mdown = 1;
             xx = x;
