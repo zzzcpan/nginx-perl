@@ -1,4 +1,10 @@
 
+1.2.0.4 Mon Apr 23 17:04:10 EEST 2012
+	- merged with nginx-1.2.0;
+	- added websockets to examples;
+	- fixed: missed timer on EAGAIN;
+	- cleaned up and optimized ngx_write();
+
 1.1.19.3 Fri Apr 13 04:44:11 EEST 2012
 	- fixed broken tests;
 	- disabled umask(0) in daemon mode;

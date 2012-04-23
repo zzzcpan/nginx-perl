@@ -24,4 +24,4 @@ no_index:
     - objs
     - inc
     - eg
-version: v1.1.19.3
+version: v1.2.0.4
