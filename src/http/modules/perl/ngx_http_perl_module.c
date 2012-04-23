@@ -2410,7 +2410,7 @@ ngx_perl_write(ngx_connection_t *c)
     c->write->handler = ngx_perl_write_handler;
 
     if (c->write->ready) {
-        c->write->handler(c->write);
+        ngx_post_event(c->write, &ngx_posted_events);
         return;
     }
 
