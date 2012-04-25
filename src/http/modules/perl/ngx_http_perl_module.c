@@ -7,6 +7,7 @@
 /* TODO
     - separate tests for reader, writer, connector, timer; 
       use the same layout for resolver's test as well;
+    - RVs as buffers, can save some memcpy, sometimes a lot;
     - fix debug messages;
     - cleanup reader/writer, avoid ngx_perl_read/write for AGAIN calls;
 */
