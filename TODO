@@ -1,17 +1,1 @@
 
-
-
-
-	Someday or never, just some ideas to consider:
-
-	- lower level to work with event loop, might be useful, 
-	  won't be enough for anyevent though;
-
-	- perl_server block for arbitrary tcp servers, not just http:
-
-	  perl_server {
-	      listen  55555;
-	      perl_accept  My::accept_handler;
-	  }
-
-

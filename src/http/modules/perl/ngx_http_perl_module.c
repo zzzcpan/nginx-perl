@@ -5,6 +5,8 @@
  */
 
 /* TODO
+    - separate tests for reader, writer, connector, timer; 
+      use the same layout for resolver's test as well;
     - fix debug messages;
     - cleanup reader/writer, avoid ngx_perl_read/write for AGAIN calls;
 */
