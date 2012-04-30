@@ -597,8 +597,8 @@ sub get_nginx_incs ($$) {
         $prefix = join '/', map { '..' } split /\/+/, $path;
     }
     
-    return map {  m!^/! ? $_ : "$prefix/$_"  } 
-             ('blib/lib', 'blib/arch', @INC);
+    return ( 'lib', map {  m!^/! ? $_ : "$prefix/$_"  } 
+                     ('blib/lib', 'blib/arch', @INC)    );
 }
 
 
