@@ -321,6 +321,23 @@ sub prepare_nginx_dir_die {
           # injecting proper @INC
         $conf =~ s/(\s+http\s*{)/$1\n$incs\n/gs;
 
+          # injecting testing defaults
+        if ($conf !~ /events/) {
+            $conf = "events { worker_connections 128; }\n$conf";
+        }
+        if ($conf !~ /error_log/) {
+            $conf = "error_log logs/error.log debug;\n$conf";
+        }
+        if ($conf !~ /master_process/) {
+            $conf = "master_process off;\n$conf";
+        }
+        if ($conf !~ /daemon/) {
+            $conf = "daemon off;\n$conf";
+        }
+        if ($conf !~ /worker_processes/) {
+            $conf = "worker_processes 1;\n$conf";
+        }
+
         open my $fh, '>', "$dir/conf/nginx-perl.conf"
             or die "Cannot open file '$dir/conf/nginx-perl.conf' " .
                    "for writing: $!";
