@@ -49,6 +49,7 @@ our $VERSION   = '1.2.0.4';
 
 use Config;
 use IO::Socket;
+use File::Path qw(rmtree);
 sub CRLF { "\x0d\x0a" }
 
 
@@ -276,6 +277,12 @@ config and packages specified as string scalars. Dies on errors.
 
 sub prepare_nginx_dir_die {
     my ($dir, $conf, @pkgs) = @_;
+
+    foreach ("$dir/html") {
+        if (-e $_) {
+            rmtree "$dir/html", 0, 0;
+        }
+    }
 
     foreach ("$dir", "$dir/conf", "$dir/lib", "$dir/logs", "$dir/html") {
         if (!-e $_) {
