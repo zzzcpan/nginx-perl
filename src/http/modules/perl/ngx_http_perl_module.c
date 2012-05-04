@@ -143,6 +143,13 @@ static ngx_command_t  ngx_http_perl_commands[] = {
       0,
       NULL },
 
+    { ngx_string("perl_content"),
+      NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF|NGX_CONF_TAKE1,
+      ngx_http_perl,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      0,
+      NULL },
+
     { ngx_string("perl_app"),
       NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF|NGX_CONF_TAKE1,
       ngx_http_perl_app,
