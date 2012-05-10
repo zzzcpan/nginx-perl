@@ -1,4 +1,10 @@
 
+1.2.0.5 Fri May 11 02:27:50 EEST 2012
+	- bugfix: segfault on reload on linux;
+	- added perl_content as an alias for perl_handler for consistency;
+	- some work on Test.pm in preparation for declarative approach;
+	- fixed bugs in eg/websockets;
+
 1.2.0.4 Mon Apr 23 17:04:10 EEST 2012
 	- merged with nginx-1.2.0;
 	- added websockets to examples;

@@ -45,7 +45,7 @@ use warnings;
 no  warnings 'uninitialized';
 use bytes;
 
-our $VERSION   = '1.2.0.4';
+our $VERSION   = '1.2.0.5';
 
 use Config;
 use IO::Socket;
