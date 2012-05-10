@@ -40,12 +40,12 @@ ngx_timezone_update(void)
 
 #elif (NGX_LINUX)
     time_t      s;
-    struct tm  *t;
+    struct tm  *t, t_r;
     char        buf[4];
 
     s = time(0);
 
-    t = localtime(&s);
+    t = localtime_r(&s, &t_r);
 
     strftime(buf, 4, "%H", t);
 
