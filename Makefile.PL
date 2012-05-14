@@ -2,6 +2,10 @@
 
 # Copyright 2011 Alexandr Gomoliako
 
+# TODO
+#  - by default build with all core modules that don't have external 
+#    dependencies;
+
 use strict;
 
 use Config;
