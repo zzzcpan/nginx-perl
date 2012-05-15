@@ -5,6 +5,7 @@
 # TODO
 #  - by default build with all core modules that don't have external 
 #    dependencies;
+#  - honour PREFIX from PERL_MM_OPT;
 
 use strict;
 
