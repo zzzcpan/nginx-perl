@@ -278,13 +278,18 @@ config and packages specified as string scalars. Dies on errors.
 sub prepare_nginx_dir_die {
     my ($dir, $conf, @pkgs) = @_;
 
-    foreach ("$dir/html") {
+    foreach ("$dir/html", "$dir/data") {
         if (-e $_) {
-            rmtree "$dir/html", 0, 0;
+            rmtree $_, 0, 0;
         }
     }
 
-    foreach ("$dir", "$dir/conf", "$dir/lib", "$dir/logs", "$dir/html") {
+    foreach ("$dir", 
+             "$dir/conf", 
+             "$dir/lib", 
+             "$dir/logs", 
+             "$dir/html", 
+             "$dir/data") {
         if (!-e $_) {
             mkdir $_
                 or die "Cannot create directory '$_': $!";
