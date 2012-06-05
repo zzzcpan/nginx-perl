@@ -1,9 +1,9 @@
 package Nginx;
 
+our $VERSION = '1.2.1.5';
+
 use strict;
 use warnings;
-
-our $VERSION = '1.2.0.5';
 
 require Exporter;
 our @ISA    = qw(Exporter);

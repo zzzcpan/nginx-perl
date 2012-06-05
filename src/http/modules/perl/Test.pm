@@ -1,5 +1,8 @@
 package Nginx::Test;
 
+our $VERSION = '1.2.1.5';
+
+
 =head1 NAME
 
 Nginx::Test - testing framework for nginx-perl and nginx
@@ -44,8 +47,6 @@ use strict;
 use warnings;
 no  warnings 'uninitialized';
 use bytes;
-
-our $VERSION   = '1.2.0.5';
 
 use Config;
 use IO::Socket;

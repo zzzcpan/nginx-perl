@@ -1,4 +1,7 @@
 
+1.2.1.5 Tue Jun  5 17:48:18 EEST 2012
+	- merged with nginx-1.2.1;
+
 1.2.0.5 Fri May 11 02:27:50 EEST 2012
 	- bugfix: segfault on reload on linux;
 	- added perl_content as an alias for perl_handler for consistency;
