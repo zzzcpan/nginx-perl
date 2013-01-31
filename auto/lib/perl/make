@@ -13,7 +13,7 @@ $NGX_OBJS/src/http/modules/perl/blib/arch/auto/Nginx/Nginx.so:		\
 	cp -p src/http/modules/perl/Nginx.xs $NGX_OBJS/src/http/modules/perl/
 	cp -p src/http/modules/perl/*.pm $NGX_OBJS/src/http/modules/perl/
 
-	cd $NGX_OBJS/src/http/modules/perl && \${MAKE}
+	cd $NGX_OBJS/src/http/modules/perl && \$(MAKE)
 
 	rm -rf blib/
 	cp -rp $NGX_OBJS/src/http/modules/perl/blib ./

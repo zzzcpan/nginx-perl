@@ -1,4 +1,7 @@
 
+1.2.6.5 Thu Jan 31 02:25:52 EET 2013
+	- merged with nginx-1.2.6;
+
 1.2.2.5 Sat Jul  7 15:57:38 EEST 2012
 	- merged with nginx-1.2.2;
 

@@ -118,18 +118,18 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     }
 
 
-    n = old_cycle->pathes.nelts ? old_cycle->pathes.nelts : 10;
+    n = old_cycle->paths.nelts ? old_cycle->paths.nelts : 10;
 
-    cycle->pathes.elts = ngx_pcalloc(pool, n * sizeof(ngx_path_t *));
-    if (cycle->pathes.elts == NULL) {
+    cycle->paths.elts = ngx_pcalloc(pool, n * sizeof(ngx_path_t *));
+    if (cycle->paths.elts == NULL) {
         ngx_destroy_pool(pool);
         return NULL;
     }
 
-    cycle->pathes.nelts = 0;
-    cycle->pathes.size = sizeof(ngx_path_t *);
-    cycle->pathes.nalloc = n;
-    cycle->pathes.pool = pool;
+    cycle->paths.nelts = 0;
+    cycle->paths.size = sizeof(ngx_path_t *);
+    cycle->paths.nalloc = n;
+    cycle->paths.pool = pool;
 
 
     if (old_cycle->open_files.part.nelts) {
@@ -334,7 +334,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
     }
 
 
-    if (ngx_create_pathes(cycle, ccf->user) != NGX_OK) {
+    if (ngx_create_paths(cycle, ccf->user) != NGX_OK) {
         goto failed;
     }
 
@@ -447,7 +447,9 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
                 continue;
             }
 
-            if (shm_zone[i].shm.size == oshm_zone[n].shm.size) {
+            if (shm_zone[i].tag == oshm_zone[n].tag
+                && shm_zone[i].shm.size == oshm_zone[n].shm.size)
+            {
                 shm_zone[i].shm.addr = oshm_zone[n].shm.addr;
 
                 if (shm_zone[i].init(&shm_zone[i], oshm_zone[n].data)
@@ -1038,6 +1040,8 @@ ngx_signal_process(ngx_cycle_t *cycle, char *sig)
 
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
+    ngx_memzero(&file, sizeof(ngx_file_t));
+
     file.name = ccf->pid;
     file.log = cycle->log;
 
@@ -1285,19 +1289,19 @@ ngx_shared_memory_add(ngx_conf_t *cf, ngx_str_t *name, size_t size, void *tag)
             continue;
         }
 
-        if (size && size != shm_zone[i].shm.size) {
-            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                            "the size %uz of shared memory zone \"%V\" "
-                            "conflicts with already declared size %uz",
-                            size, &shm_zone[i].shm.name, shm_zone[i].shm.size);
-            return NULL;
-        }
-
         if (tag != shm_zone[i].tag) {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                             "the shared memory zone \"%V\" is "
                             "already declared for a different use",
                             &shm_zone[i].shm.name);
+            return NULL;
+        }
+
+        if (size && size != shm_zone[i].shm.size) {
+            ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                            "the size %uz of shared memory zone \"%V\" "
+                            "conflicts with already declared size %uz",
+                            size, &shm_zone[i].shm.name, shm_zone[i].shm.size);
             return NULL;
         }
 
