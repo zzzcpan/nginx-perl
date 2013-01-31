@@ -1,6 +1,6 @@
 package Nginx;
 
-our $VERSION = '1.2.6.5';
+our $VERSION = '1.2.6.6';
 
 use strict;
 use warnings;

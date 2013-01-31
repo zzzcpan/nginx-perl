@@ -10,7 +10,7 @@
 
 
 #define nginx_version      1002006
-#define NGINX_VERSION      "1.2.6.5"
+#define NGINX_VERSION      "1.2.6.6"
 #define NGINX_VER          "nginx-perl/" NGINX_VERSION
 
 #define NGINX_VAR          "NGINX"
