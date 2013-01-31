@@ -637,6 +637,19 @@ header_out(r, key, value)
 
 
 void
+clear_content_length(r)
+    CODE:
+        ngx_http_request_t  *r;
+        
+        ngx_http_perl_set_request(r);
+        
+        r->headers_out.content_length = NULL;
+        r->headers_out.content_length_n = -1;
+
+        XSRETURN_EMPTY;
+
+
+void
 filename(r)
     CODE:
         dXSTARG;
