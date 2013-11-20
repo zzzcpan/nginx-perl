@@ -1,4 +1,8 @@
 
+1.2.9.6 Wed Nov 20 02:16:37 EET 2013
+	- merged with nginx-1.2.9;
+	- applied CVE-2013-4547 patch;
+
 1.2.6.6 Thu Jan 31 02:25:52 EET 2013
 	- merged with nginx-1.2.6;
 
