@@ -1,8 +1,8 @@
 language: perl
 perl:
+  - "5.22"
+  - "5.18"
   - "5.14"
-  - "5.12"
-  - "5.10"
 notifications:
   email:
     recipients: # feel free to ask if you want to get notified as well
