@@ -41,7 +41,7 @@ static ngx_command_t  ngx_mail_core_commands[] = {
       NULL },
 
     { ngx_string("listen"),
-      NGX_MAIL_SRV_CONF|NGX_CONF_TAKE12,
+      NGX_MAIL_SRV_CONF|NGX_CONF_1MORE,
       ngx_mail_core_listen,
       NGX_MAIL_SRV_CONF_OFFSET,
       0,
@@ -336,7 +336,7 @@ ngx_mail_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             off = offsetof(struct sockaddr_in6, sin6_addr);
             len = 16;
             sin6 = (struct sockaddr_in6 *) sa;
-            port = sin6->sin6_port;
+            port = ntohs(sin6->sin6_port);
             break;
 #endif
 
@@ -352,7 +352,7 @@ ngx_mail_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             off = offsetof(struct sockaddr_in, sin_addr);
             len = 4;
             sin = (struct sockaddr_in *) sa;
-            port = sin->sin_port;
+            port = ntohs(sin->sin_port);
             break;
         }
 
@@ -381,6 +381,10 @@ ngx_mail_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     ls->socklen = u.socklen;
     ls->wildcard = u.wildcard;
     ls->ctx = cf->ctx;
+
+#if (NGX_HAVE_INET6 && defined IPV6_V6ONLY)
+    ls->ipv6only = 1;
+#endif
 
     if (cscf->protocol == NULL) {
         for (m = 0; ngx_modules[m]; m++) {
@@ -423,7 +427,7 @@ ngx_mail_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                     ls->ipv6only = 1;
 
                 } else if (ngx_strcmp(&value[i].data[10], "ff") == 0) {
-                    ls->ipv6only = 2;
+                    ls->ipv6only = 0;
 
                 } else {
                     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -435,7 +439,8 @@ ngx_mail_core_listen(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
                 ls->bind = 1;
 
             } else {
-                len = ngx_sock_ntop(sa, buf, NGX_SOCKADDR_STRLEN, 1);
+                len = ngx_sock_ntop(sa, ls->socklen, buf,
+                                    NGX_SOCKADDR_STRLEN, 1);
 
                 ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                                    "ipv6only is not supported "

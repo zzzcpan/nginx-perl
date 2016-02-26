@@ -1,6 +1,6 @@
 package Nginx::Test;
 
-our $VERSION = '1.2.9.7';
+our $VERSION = '1.8.1.8';
 
 
 =head1 NAME

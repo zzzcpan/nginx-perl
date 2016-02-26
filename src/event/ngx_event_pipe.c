@@ -57,7 +57,7 @@ ngx_event_pipe(ngx_event_pipe_t *p, ngx_int_t do_write)
         do_write = 1;
     }
 
-    if (p->upstream->fd != -1) {
+    if (p->upstream->fd != (ngx_socket_t) -1) {
         rev = p->upstream->read;
 
         flags = (rev->eof || rev->error) ? NGX_CLOSE_EVENT : 0;
@@ -66,15 +66,19 @@ ngx_event_pipe(ngx_event_pipe_t *p, ngx_int_t do_write)
             return NGX_ABORT;
         }
 
-        if (rev->active && !rev->ready) {
-            ngx_add_timer(rev, p->read_timeout);
+        if (!rev->delayed) {
+            if (rev->active && !rev->ready) {
+                ngx_add_timer(rev, p->read_timeout);
 
-        } else if (rev->timer_set) {
-            ngx_del_timer(rev);
+            } else if (rev->timer_set) {
+                ngx_del_timer(rev);
+            }
         }
     }
 
-    if (p->downstream->fd != -1 && p->downstream->data == p->output_ctx) {
+    if (p->downstream->fd != (ngx_socket_t) -1
+        && p->downstream->data == p->output_ctx)
+    {
         wev = p->downstream->write;
         if (ngx_handle_write_event(wev, p->send_lowat) != NGX_OK) {
             return NGX_ABORT;
@@ -97,9 +101,11 @@ ngx_event_pipe(ngx_event_pipe_t *p, ngx_int_t do_write)
 static ngx_int_t
 ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
 {
+    off_t         limit;
     ssize_t       n, size;
     ngx_int_t     rc;
     ngx_buf_t    *b;
+    ngx_msec_t    delay;
     ngx_chain_t  *chain, *cl, *ln;
 
     if (p->upstream_eof || p->upstream_error || p->upstream_done) {
@@ -167,6 +173,25 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
             }
 #endif
 
+            if (p->limit_rate) {
+                if (p->upstream->read->delayed) {
+                    break;
+                }
+
+                limit = (off_t) p->limit_rate * (ngx_time() - p->start_sec + 1)
+                        - p->read_length;
+
+                if (limit <= 0) {
+                    p->upstream->read->delayed = 1;
+                    delay = (ngx_msec_t) (- limit * 1000 / p->limit_rate + 1);
+                    ngx_add_timer(p->upstream->read, delay);
+                    break;
+                }
+
+            } else {
+                limit = 0;
+            }
+
             if (p->free_raw_bufs) {
 
                 /* use the free bufs if they exist */
@@ -220,8 +245,8 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
             {
 
                 /*
-                 * if it is allowed, then save some bufs from r->in
-                 * to a temporary file, and add them to a r->out chain
+                 * if it is allowed, then save some bufs from p->in
+                 * to a temporary file, and add them to a p->out chain
                  */
 
                 rc = ngx_event_pipe_write_chain_to_temp_file(p);
@@ -268,7 +293,7 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
                 break;
             }
 
-            n = p->upstream->recv_chain(p->upstream, chain);
+            n = p->upstream->recv_chain(p->upstream, chain, limit);
 
             ngx_log_debug1(NGX_LOG_DEBUG_EVENT, p->log, 0,
                            "pipe recv chain: %z", n);
@@ -298,6 +323,8 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
                 break;
             }
         }
+
+        delay = p->limit_rate ? (ngx_msec_t) n * 1000 / p->limit_rate : 0;
 
         p->read_length += n;
         cl = chain;
@@ -335,6 +362,12 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
             ln->next = p->free_raw_bufs;
             p->free_raw_bufs = cl;
         }
+
+        if (delay > 0) {
+            p->upstream->read->delayed = 1;
+            ngx_add_timer(p->upstream->read, delay);
+            break;
+        }
     }
 
 #if (NGX_DEBUG)
@@ -343,7 +376,7 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
         ngx_log_debug8(NGX_LOG_DEBUG_EVENT, p->log, 0,
                        "pipe buf busy s:%d t:%d f:%d "
                        "%p, pos %p, size: %z "
-                       "file: %O, size: %z",
+                       "file: %O, size: %O",
                        (cl->buf->shadow ? 1 : 0),
                        cl->buf->temporary, cl->buf->in_file,
                        cl->buf->start, cl->buf->pos,
@@ -356,7 +389,7 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
         ngx_log_debug8(NGX_LOG_DEBUG_EVENT, p->log, 0,
                        "pipe buf out  s:%d t:%d f:%d "
                        "%p, pos %p, size: %z "
-                       "file: %O, size: %z",
+                       "file: %O, size: %O",
                        (cl->buf->shadow ? 1 : 0),
                        cl->buf->temporary, cl->buf->in_file,
                        cl->buf->start, cl->buf->pos,
@@ -369,7 +402,7 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
         ngx_log_debug8(NGX_LOG_DEBUG_EVENT, p->log, 0,
                        "pipe buf in   s:%d t:%d f:%d "
                        "%p, pos %p, size: %z "
-                       "file: %O, size: %z",
+                       "file: %O, size: %O",
                        (cl->buf->shadow ? 1 : 0),
                        cl->buf->temporary, cl->buf->in_file,
                        cl->buf->start, cl->buf->pos,
@@ -382,7 +415,7 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
         ngx_log_debug8(NGX_LOG_DEBUG_EVENT, p->log, 0,
                        "pipe buf free s:%d t:%d f:%d "
                        "%p, pos %p, size: %z "
-                       "file: %O, size: %z",
+                       "file: %O, size: %O",
                        (cl->buf->shadow ? 1 : 0),
                        cl->buf->temporary, cl->buf->in_file,
                        cl->buf->start, cl->buf->pos,
@@ -437,7 +470,11 @@ ngx_event_pipe_read_upstream(ngx_event_pipe_t *p)
         }
     }
 
-    if (p->cacheable && p->in) {
+    if (p->cacheable && (p->in || p->buf_to_file)) {
+
+        ngx_log_debug0(NGX_LOG_DEBUG_EVENT, p->log, 0,
+                       "pipe write chain");
+
         if (ngx_event_pipe_write_chain_to_temp_file(p) == NGX_ABORT) {
             return NGX_ABORT;
         }
@@ -454,7 +491,7 @@ ngx_event_pipe_write_to_downstream(ngx_event_pipe_t *p)
     size_t             bsize;
     ngx_int_t          rc;
     ngx_uint_t         flush, flushed, prev_last_shadow;
-    ngx_chain_t       *out, **ll, *cl, file;
+    ngx_chain_t       *out, **ll, *cl;
     ngx_connection_t  *downstream;
 
     downstream = p->downstream;
@@ -511,18 +548,6 @@ ngx_event_pipe_write_to_downstream(ngx_event_pipe_t *p)
                 }
 
                 p->in = NULL;
-            }
-
-            if (p->cacheable && p->buf_to_file) {
-
-                file.buf = p->buf_to_file;
-                file.next = NULL;
-
-                if (ngx_write_chain_to_temp_file(p->temp_file, &file)
-                    == NGX_ERROR)
-                {
-                    return NGX_ABORT;
-                }
             }
 
             ngx_log_debug0(NGX_LOG_DEBUG_EVENT, p->log, 0,
@@ -858,18 +883,12 @@ ngx_event_pipe_copy_input_filter(ngx_event_pipe_t *p, ngx_buf_t *buf)
         return NGX_OK;
     }
 
-    if (p->free) {
-        cl = p->free;
-        b = cl->buf;
-        p->free = cl->next;
-        ngx_free_chain(p->pool, cl);
-
-    } else {
-        b = ngx_alloc_buf(p->pool);
-        if (b == NULL) {
-            return NGX_ERROR;
-        }
+    cl = ngx_chain_get_free_buf(p->pool, &p->free);
+    if (cl == NULL) {
+        return NGX_ERROR;
     }
+
+    b = cl->buf;
 
     ngx_memcpy(b, buf, sizeof(ngx_buf_t));
     b->shadow = buf;
@@ -877,14 +896,6 @@ ngx_event_pipe_copy_input_filter(ngx_event_pipe_t *p, ngx_buf_t *buf)
     b->last_shadow = 1;
     b->recycled = 1;
     buf->shadow = b;
-
-    cl = ngx_alloc_chain_link(p->pool);
-    if (cl == NULL) {
-        return NGX_ERROR;
-    }
-
-    cl->buf = b;
-    cl->next = NULL;
 
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, p->log, 0, "input buf #%d", b->num);
 

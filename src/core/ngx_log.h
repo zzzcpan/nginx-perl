@@ -43,6 +43,8 @@
 
 
 typedef u_char *(*ngx_log_handler_pt) (ngx_log_t *log, u_char *buf, size_t len);
+typedef void (*ngx_log_writer_pt) (ngx_log_t *log, ngx_uint_t level,
+    u_char *buf, size_t len);
 
 
 struct ngx_log_s {
@@ -51,8 +53,13 @@ struct ngx_log_s {
 
     ngx_atomic_uint_t    connection;
 
+    time_t               disk_full_time;
+
     ngx_log_handler_pt   handler;
     void                *data;
+
+    ngx_log_writer_pt    writer;
+    void                *wdata;
 
     /*
      * we declare "action" as "char *" because the actions are usually
@@ -61,6 +68,8 @@ struct ngx_log_s {
      */
 
     char                *action;
+
+    ngx_log_t           *next;
 };
 
 
@@ -220,11 +229,13 @@ void ngx_cdecl ngx_log_debug_core(ngx_log_t *log, ngx_err_t err,
 /*********************************/
 
 ngx_log_t *ngx_log_init(u_char *prefix);
-ngx_log_t *ngx_log_create(ngx_cycle_t *cycle, ngx_str_t *name);
-char *ngx_log_set_levels(ngx_conf_t *cf, ngx_log_t *log);
 void ngx_cdecl ngx_log_abort(ngx_err_t err, const char *fmt, ...);
 void ngx_cdecl ngx_log_stderr(ngx_err_t err, const char *fmt, ...);
 u_char *ngx_log_errno(u_char *buf, u_char *last, ngx_err_t err);
+ngx_int_t ngx_log_open_default(ngx_cycle_t *cycle);
+ngx_int_t ngx_log_redirect_stderr(ngx_cycle_t *cycle);
+ngx_log_t *ngx_log_get_file_log(ngx_log_t *head);
+char *ngx_log_set_log(ngx_conf_t *cf, ngx_log_t **head);
 
 
 /*
@@ -239,7 +250,7 @@ u_char *ngx_log_errno(u_char *buf, u_char *last, ngx_err_t err);
 static ngx_inline void
 ngx_write_stderr(char *text)
 {
-    (void) ngx_write_fd(ngx_stderr, text, strlen(text));
+    (void) ngx_write_fd(ngx_stderr, text, ngx_strlen(text));
 }
 
 

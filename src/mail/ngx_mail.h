@@ -39,7 +39,7 @@ typedef struct {
     unsigned                ssl:1;
 #endif
 #if (NGX_HAVE_INET6 && defined IPV6_V6ONLY)
-    unsigned                ipv6only:2;
+    unsigned                ipv6only:1;
 #endif
     unsigned                so_keepalive:2;
 #if (NGX_HAVE_KEEPALIVE_TUNABLE)
@@ -100,7 +100,7 @@ typedef struct {
     unsigned                ssl:1;
 #endif
 #if (NGX_HAVE_INET6 && defined IPV6_V6ONLY)
-    unsigned                ipv6only:2;
+    unsigned                ipv6only:1;
 #endif
     unsigned                so_keepalive:2;
 #if (NGX_HAVE_KEEPALIVE_TUNABLE)
@@ -234,6 +234,8 @@ typedef struct {
     ngx_str_t               smtp_from;
     ngx_str_t               smtp_to;
 
+    ngx_str_t               cmd;
+
     ngx_uint_t              command;
     ngx_array_t             args;
 
@@ -334,6 +336,8 @@ struct ngx_mail_protocol_s {
     ngx_mail_auth_state_pt      auth_state;
 
     ngx_str_t                   internal_server_error;
+    ngx_str_t                   cert_error;
+    ngx_str_t                   no_cert;
 };
 
 

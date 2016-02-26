@@ -88,7 +88,7 @@ ngx_event_module_t  ngx_devpoll_module_ctx = {
         ngx_devpoll_del_event,             /* disable an event */
         NULL,                              /* add an connection */
         NULL,                              /* delete an connection */
-        NULL,                              /* process the changes */
+        NULL,                              /* trigger a notify */
         ngx_devpoll_process_events,        /* process the events */
         ngx_devpoll_init,                  /* init the events */
         ngx_devpoll_done,                  /* done the events */
@@ -343,8 +343,9 @@ ngx_devpoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
     ngx_fd_t            fd;
     ngx_err_t           err;
     ngx_int_t           i;
-    ngx_uint_t          level;
-    ngx_event_t        *rev, *wev, **queue;
+    ngx_uint_t          level, instance;
+    ngx_event_t        *rev, *wev;
+    ngx_queue_t        *queue;
     ngx_connection_t   *c;
     struct pollfd       pfd;
     struct dvpoll       dvp;
@@ -404,8 +405,6 @@ ngx_devpoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
         return NGX_ERROR;
     }
 
-    ngx_mutex_lock(ngx_posted_events_mutex);
-
     for (i = 0; i < events; i++) {
 
         fd = event_list[i].fd;
@@ -425,7 +424,7 @@ ngx_devpoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
 
             case -1:
                 ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                    "ioctl(DP_ISPOLLED) failed for socket %d, event",
+                    "ioctl(DP_ISPOLLED) failed for socket %d, event %04Xd",
                     fd, revents);
                 break;
 
@@ -449,7 +448,7 @@ ngx_devpoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
                     != (ssize_t) sizeof(struct pollfd))
                 {
                     ngx_log_error(NGX_LOG_ALERT, cycle->log, ngx_errno,
-                                  "write(/dev/poll) for %d failed, fd");
+                                  "write(/dev/poll) for %d failed", fd);
                 }
 
                 if (close(fd) == -1) {
@@ -495,46 +494,38 @@ ngx_devpoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer,
         rev = c->read;
 
         if ((revents & POLLIN) && rev->active) {
-
-            if ((flags & NGX_POST_THREAD_EVENTS) && !rev->accept) {
-                rev->posted_ready = 1;
-
-            } else {
-                rev->ready = 1;
-            }
+            rev->ready = 1;
 
             if (flags & NGX_POST_EVENTS) {
-                queue = (ngx_event_t **) (rev->accept ?
-                               &ngx_posted_accept_events : &ngx_posted_events);
+                queue = rev->accept ? &ngx_posted_accept_events
+                                    : &ngx_posted_events;
 
-                ngx_locked_post_event(rev, queue);
+                ngx_post_event(rev, queue);
 
             } else {
+                instance = rev->instance;
+
                 rev->handler(rev);
+
+                if (c->fd == -1 || rev->instance != instance) {
+                    continue;
+                }
             }
         }
 
         wev = c->write;
 
         if ((revents & POLLOUT) && wev->active) {
-
-            if (flags & NGX_POST_THREAD_EVENTS) {
-                wev->posted_ready = 1;
-
-            } else {
-                wev->ready = 1;
-            }
+            wev->ready = 1;
 
             if (flags & NGX_POST_EVENTS) {
-                ngx_locked_post_event(wev, &ngx_posted_events);
+                ngx_post_event(wev, &ngx_posted_events);
 
             } else {
                 wev->handler(wev);
             }
         }
     }
-
-    ngx_mutex_unlock(ngx_posted_events_mutex);
 
     return NGX_OK;
 }

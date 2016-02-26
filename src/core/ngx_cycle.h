@@ -14,7 +14,7 @@
 
 
 #ifndef NGX_CYCLE_POOL_SIZE
-#define NGX_CYCLE_POOL_SIZE     16384
+#define NGX_CYCLE_POOL_SIZE     NGX_DEFAULT_POOL_SIZE
 #endif
 
 
@@ -40,6 +40,8 @@ struct ngx_cycle_s {
 
     ngx_log_t                *log;
     ngx_log_t                 new_log;
+
+    ngx_uint_t                log_use_stderr;  /* unsigned  log_use_stderr:1; */
 
     ngx_connection_t        **files;
     ngx_connection_t         *free_connections;
@@ -101,7 +103,7 @@ typedef struct {
      ngx_array_t              env;
      char                   **environment;
 
-#if (NGX_THREADS)
+#if (NGX_OLD_THREADS)
      ngx_int_t                worker_threads;
      size_t                   thread_stack_size;
 #endif
@@ -109,9 +111,13 @@ typedef struct {
 } ngx_core_conf_t;
 
 
+#if (NGX_OLD_THREADS)
+
 typedef struct {
      ngx_pool_t              *pool;   /* pcre's malloc() pool */
 } ngx_core_tls_t;
+
+#endif
 
 
 #define ngx_is_init_cycle(cycle)  (cycle->conf_ctx == NULL)
@@ -134,7 +140,7 @@ extern ngx_array_t            ngx_old_cycles;
 extern ngx_module_t           ngx_core_module;
 extern ngx_uint_t             ngx_test_config;
 extern ngx_uint_t             ngx_quiet_mode;
-#if (NGX_THREADS)
+#if (NGX_OLD_THREADS)
 extern ngx_tls_key_t          ngx_core_tls_key;
 #endif
 

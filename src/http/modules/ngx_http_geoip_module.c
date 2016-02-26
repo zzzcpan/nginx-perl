@@ -240,19 +240,18 @@ static u_long
 ngx_http_geoip_addr(ngx_http_request_t *r, ngx_http_geoip_conf_t *gcf)
 {
     ngx_addr_t           addr;
-    ngx_table_elt_t     *xfwd;
+    ngx_array_t         *xfwd;
     struct sockaddr_in  *sin;
 
     addr.sockaddr = r->connection->sockaddr;
     addr.socklen = r->connection->socklen;
     /* addr.name = r->connection->addr_text; */
 
-    xfwd = r->headers_in.x_forwarded_for;
+    xfwd = &r->headers_in.x_forwarded_for;
 
-    if (xfwd != NULL && gcf->proxies != NULL) {
-        (void) ngx_http_get_forwarded_addr(r, &addr, xfwd->value.data,
-                                           xfwd->value.len, gcf->proxies,
-                                           gcf->proxy_recursive);
+    if (xfwd->nelts > 0 && gcf->proxies != NULL) {
+        (void) ngx_http_get_forwarded_addr(r, &addr, xfwd, NULL,
+                                           gcf->proxies, gcf->proxy_recursive);
     }
 
 #if (NGX_HAVE_INET6)
@@ -293,7 +292,7 @@ static geoipv6_t
 ngx_http_geoip_addr_v6(ngx_http_request_t *r, ngx_http_geoip_conf_t *gcf)
 {
     ngx_addr_t            addr;
-    ngx_table_elt_t      *xfwd;
+    ngx_array_t          *xfwd;
     in_addr_t             addr4;
     struct in6_addr       addr6;
     struct sockaddr_in   *sin;
@@ -303,12 +302,11 @@ ngx_http_geoip_addr_v6(ngx_http_request_t *r, ngx_http_geoip_conf_t *gcf)
     addr.socklen = r->connection->socklen;
     /* addr.name = r->connection->addr_text; */
 
-    xfwd = r->headers_in.x_forwarded_for;
+    xfwd = &r->headers_in.x_forwarded_for;
 
-    if (xfwd != NULL && gcf->proxies != NULL) {
-        (void) ngx_http_get_forwarded_addr(r, &addr, xfwd->value.data,
-                                           xfwd->value.len, gcf->proxies,
-                                           gcf->proxy_recursive);
+    if (xfwd->nelts > 0 && gcf->proxies != NULL) {
+        (void) ngx_http_get_forwarded_addr(r, &addr, xfwd, NULL,
+                                           gcf->proxies, gcf->proxy_recursive);
     }
 
     switch (addr.sockaddr->sa_family) {
@@ -555,6 +553,9 @@ ngx_http_geoip_city_float_variable(ngx_http_request_t *r,
     val = *(float *) ((char *) gr + data);
 
     v->len = ngx_sprintf(v->data, "%.4f", val) - v->data;
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
 
     GeoIPRecord_delete(gr);
 
@@ -584,6 +585,9 @@ ngx_http_geoip_city_int_variable(ngx_http_request_t *r,
     val = *(int *) ((char *) gr + data);
 
     v->len = ngx_sprintf(v->data, "%d", val) - v->data;
+    v->valid = 1;
+    v->no_cacheable = 0;
+    v->not_found = 0;
 
     GeoIPRecord_delete(gr);
 
@@ -693,7 +697,7 @@ ngx_http_geoip_country(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (cf->args->nelts == 3) {
         if (ngx_strcmp(value[2].data, "utf8") == 0) {
-            GeoIP_set_charset (gcf->country, GEOIP_CHARSET_UTF8);
+            GeoIP_set_charset(gcf->country, GEOIP_CHARSET_UTF8);
 
         } else {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -748,7 +752,7 @@ ngx_http_geoip_org(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (cf->args->nelts == 3) {
         if (ngx_strcmp(value[2].data, "utf8") == 0) {
-            GeoIP_set_charset (gcf->org, GEOIP_CHARSET_UTF8);
+            GeoIP_set_charset(gcf->org, GEOIP_CHARSET_UTF8);
 
         } else {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
@@ -809,7 +813,7 @@ ngx_http_geoip_city(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
     if (cf->args->nelts == 3) {
         if (ngx_strcmp(value[2].data, "utf8") == 0) {
-            GeoIP_set_charset (gcf->city, GEOIP_CHARSET_UTF8);
+            GeoIP_set_charset(gcf->city, GEOIP_CHARSET_UTF8);
 
         } else {
             ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,

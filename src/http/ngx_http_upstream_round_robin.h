@@ -18,6 +18,7 @@ typedef struct {
     struct sockaddr                *sockaddr;
     socklen_t                       socklen;
     ngx_str_t                       name;
+    ngx_str_t                       server;
 
     ngx_int_t                       current_weight;
     ngx_int_t                       effective_weight;
@@ -42,10 +43,6 @@ typedef struct ngx_http_upstream_rr_peers_s  ngx_http_upstream_rr_peers_t;
 
 struct ngx_http_upstream_rr_peers_s {
     ngx_uint_t                      number;
-    ngx_uint_t                      last_cached;
-
- /* ngx_mutex_t                    *mutex; */
-    ngx_connection_t              **cached;
 
     ngx_uint_t                      total_weight;
 

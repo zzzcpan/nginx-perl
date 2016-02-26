@@ -16,6 +16,7 @@
 #include <stddef.h>             /* offsetof() */
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
@@ -94,11 +95,10 @@ typedef struct aiocb  ngx_aiocb_t;
 #define NGX_LISTEN_BACKLOG        -1
 
 
-#if (__FreeBSD_version < 430000 || __FreeBSD_version < 500012)
-
-pid_t rfork_thread(int flags, void *stack, int (*func)(void *arg), void *arg);
-
+#ifdef __DragonFly__
+#define NGX_KEEPALIVE_FACTOR      1000
 #endif
+
 
 #ifndef IOV_MAX
 #define IOV_MAX   1024

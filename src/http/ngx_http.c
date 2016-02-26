@@ -69,8 +69,9 @@ static ngx_int_t ngx_http_add_addrs6(ngx_conf_t *cf, ngx_http_port_t *hport,
 ngx_uint_t   ngx_http_max_module;
 
 
-ngx_int_t  (*ngx_http_top_header_filter) (ngx_http_request_t *r);
-ngx_int_t  (*ngx_http_top_body_filter) (ngx_http_request_t *r, ngx_chain_t *ch);
+ngx_http_output_header_filter_pt  ngx_http_top_header_filter;
+ngx_http_output_body_filter_pt    ngx_http_top_body_filter;
+ngx_http_request_body_filter_pt   ngx_http_top_request_body_filter;
 
 
 ngx_str_t  ngx_http_html_default_types[] = {
@@ -742,7 +743,7 @@ ngx_http_init_locations(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 
     if (named) {
         clcfp = ngx_palloc(cf->pool,
-                           (n + 1) * sizeof(ngx_http_core_loc_conf_t **));
+                           (n + 1) * sizeof(ngx_http_core_loc_conf_t *));
         if (clcfp == NULL) {
             return NGX_ERROR;
         }
@@ -768,7 +769,7 @@ ngx_http_init_locations(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
     if (regex) {
 
         clcfp = ngx_palloc(cf->pool,
-                           (r + 1) * sizeof(ngx_http_core_loc_conf_t **));
+                           (r + 1) * sizeof(ngx_http_core_loc_conf_t *));
         if (clcfp == NULL) {
             return NGX_ERROR;
         }
@@ -949,7 +950,8 @@ ngx_http_cmp_locations(const ngx_queue_t *one, const ngx_queue_t *two)
 
 #endif
 
-    rc = ngx_strcmp(first->name.data, second->name.data);
+    rc = ngx_filename_cmp(first->name.data, second->name.data,
+                          ngx_min(first->name.len, second->name.len) + 1);
 
     if (rc == 0 && !first->exact_match && second->exact_match) {
         /* an exact match must be before the same inclusive one */
@@ -975,8 +977,10 @@ ngx_http_join_exact_locations(ngx_conf_t *cf, ngx_queue_t *locations)
         lq = (ngx_http_location_queue_t *) q;
         lx = (ngx_http_location_queue_t *) x;
 
-        if (ngx_strcmp(lq->name->data, lx->name->data) == 0) {
-
+        if (lq->name->len == lx->name->len
+            && ngx_filename_cmp(lq->name->data, lx->name->data, lx->name->len)
+               == 0)
+        {
             if ((lq->exact && lx->exact) || (lq->inclusive && lx->inclusive)) {
                 ngx_log_error(NGX_LOG_EMERG, cf->log, 0,
                               "duplicate location \"%V\" in %s:%ui",
@@ -1028,7 +1032,7 @@ ngx_http_create_locations_list(ngx_queue_t *locations, ngx_queue_t *q)
         lx = (ngx_http_location_queue_t *) x;
 
         if (len > lx->name->len
-            || (ngx_strncmp(name, lx->name->data, len) != 0))
+            || ngx_filename_cmp(name, lx->name->data, len) != 0)
         {
             break;
         }
@@ -1216,7 +1220,7 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 {
     u_char                *p;
     size_t                 len, off;
-    ngx_uint_t             i, default_server;
+    ngx_uint_t             i, default_server, proxy_protocol;
     struct sockaddr       *sa;
     ngx_http_conf_addr_t  *addr;
 #if (NGX_HAVE_UNIX_DOMAIN)
@@ -1224,6 +1228,9 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
 #endif
 #if (NGX_HTTP_SSL)
     ngx_uint_t             ssl;
+#endif
+#if (NGX_HTTP_SPDY)
+    ngx_uint_t             spdy;
 #endif
 
     /*
@@ -1274,8 +1281,13 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         /* preserve default_server bit during listen options overwriting */
         default_server = addr[i].opt.default_server;
 
+        proxy_protocol = lsopt->proxy_protocol || addr[i].opt.proxy_protocol;
+
 #if (NGX_HTTP_SSL)
         ssl = lsopt->ssl || addr[i].opt.ssl;
+#endif
+#if (NGX_HTTP_SPDY)
+        spdy = lsopt->spdy || addr[i].opt.spdy;
 #endif
 
         if (lsopt->set) {
@@ -1304,8 +1316,12 @@ ngx_http_add_addresses(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
         }
 
         addr[i].opt.default_server = default_server;
+        addr[i].opt.proxy_protocol = proxy_protocol;
 #if (NGX_HTTP_SSL)
         addr[i].opt.ssl = ssl;
+#endif
+#if (NGX_HTTP_SPDY)
+        addr[i].opt.spdy = spdy;
 #endif
 
         return NGX_OK;
@@ -1336,6 +1352,16 @@ ngx_http_add_address(ngx_conf_t *cf, ngx_http_core_srv_conf_t *cscf,
             return NGX_ERROR;
         }
     }
+
+#if (NGX_HTTP_SPDY && NGX_HTTP_SSL                                            \
+     && !defined TLSEXT_TYPE_application_layer_protocol_negotiation           \
+     && !defined TLSEXT_TYPE_next_proto_neg)
+    if (lsopt->spdy && lsopt->ssl) {
+        ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
+                           "nginx was built without OpenSSL ALPN or NPN "
+                           "support, SPDY is not enabled for %s", lsopt->addr);
+    }
+#endif
 
     addr = ngx_array_push(&port->addrs);
     if (addr == NULL) {
@@ -1462,7 +1488,7 @@ ngx_http_server_names(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
 
     ngx_memzero(&ha, sizeof(ngx_hash_keys_arrays_t));
 
-    ha.temp_pool = ngx_create_pool(16384, cf->log);
+    ha.temp_pool = ngx_create_pool(NGX_DEFAULT_POOL_SIZE, cf->log);
     if (ha.temp_pool == NULL) {
         return NGX_ERROR;
     }
@@ -1791,6 +1817,10 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
     ls->setfib = addr->opt.setfib;
 #endif
 
+#if (NGX_HAVE_TCP_FASTOPEN)
+    ls->fastopen = addr->opt.fastopen;
+#endif
+
     return ls;
 }
 
@@ -1820,6 +1850,10 @@ ngx_http_add_addrs(ngx_conf_t *cf, ngx_http_port_t *hport,
 #if (NGX_HTTP_SSL)
         addrs[i].conf.ssl = addr[i].opt.ssl;
 #endif
+#if (NGX_HTTP_SPDY)
+        addrs[i].conf.spdy = addr[i].opt.spdy;
+#endif
+        addrs[i].conf.proxy_protocol = addr[i].opt.proxy_protocol;
 
         if (addr[i].hash.buckets == NULL
             && (addr[i].wc_head == NULL
@@ -1880,6 +1914,9 @@ ngx_http_add_addrs6(ngx_conf_t *cf, ngx_http_port_t *hport,
         addrs6[i].conf.default_server = addr[i].default_server;
 #if (NGX_HTTP_SSL)
         addrs6[i].conf.ssl = addr[i].opt.ssl;
+#endif
+#if (NGX_HTTP_SPDY)
+        addrs6[i].conf.spdy = addr[i].opt.spdy;
 #endif
 
         if (addr[i].hash.buckets == NULL
@@ -1972,7 +2009,7 @@ ngx_http_types_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
             if (ngx_strcmp(value[i].data, type[n].key.data) == 0) {
                 ngx_conf_log_error(NGX_LOG_WARN, cf, 0,
                                    "duplicate MIME type \"%V\"", &value[i]);
-                continue;
+                goto next;
             }
         }
 
@@ -1984,6 +2021,10 @@ ngx_http_types_slot(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
         type->key = value[i];
         type->key_hash = hash;
         type->value = (void *) 4;
+
+    next:
+
+        continue;
     }
 
     return NGX_CONF_OK;

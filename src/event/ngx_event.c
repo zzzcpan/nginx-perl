@@ -56,7 +56,6 @@ ngx_uint_t            ngx_accept_events;
 ngx_uint_t            ngx_accept_mutex_held;
 ngx_msec_t            ngx_accept_mutex_delay;
 ngx_int_t             ngx_accept_disabled;
-ngx_file_t            ngx_accept_mutex_lock_file;
 
 
 #if (NGX_STAT_STUB)
@@ -73,6 +72,8 @@ ngx_atomic_t   ngx_stat_reading0;
 ngx_atomic_t  *ngx_stat_reading = &ngx_stat_reading0;
 ngx_atomic_t   ngx_stat_writing0;
 ngx_atomic_t  *ngx_stat_writing = &ngx_stat_writing0;
+ngx_atomic_t   ngx_stat_waiting0;
+ngx_atomic_t  *ngx_stat_waiting = &ngx_stat_waiting0;
 
 #endif
 
@@ -211,7 +212,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         timer = ngx_event_find_timer();
         flags = NGX_UPDATE_TIME;
 
-#if (NGX_THREADS)
+#if (NGX_OLD_THREADS)
 
         if (timer == NGX_TIMER_INFINITE || timer > 500) {
             timer = 500;
@@ -251,9 +252,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
     ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
                    "timer delta: %M", delta);
 
-    if (ngx_posted_accept_events) {
-        ngx_event_process_posted(cycle, &ngx_posted_accept_events);
-    }
+    ngx_event_process_posted(cycle, &ngx_posted_accept_events);
 
     if (ngx_accept_mutex_held) {
         ngx_shmtx_unlock(&ngx_accept_mutex);
@@ -263,17 +262,7 @@ ngx_process_events_and_timers(ngx_cycle_t *cycle)
         ngx_event_expire_timers();
     }
 
-    ngx_log_debug1(NGX_LOG_DEBUG_EVENT, cycle->log, 0,
-                   "posted events %p", ngx_posted_events);
-
-    if (ngx_posted_events) {
-        if (ngx_threaded) {
-            ngx_wakeup_worker_thread(cycle);
-
-        } else {
-            ngx_event_process_posted(cycle, &ngx_posted_events);
-        }
-    }
+    ngx_event_process_posted(cycle, &ngx_posted_events);
 }
 
 
@@ -511,7 +500,8 @@ ngx_event_module_init(ngx_cycle_t *cycle)
            + cl          /* ngx_stat_requests */
            + cl          /* ngx_stat_active */
            + cl          /* ngx_stat_reading */
-           + cl;         /* ngx_stat_writing */
+           + cl          /* ngx_stat_writing */
+           + cl;         /* ngx_stat_waiting */
 
 #endif
 
@@ -558,6 +548,7 @@ ngx_event_module_init(ngx_cycle_t *cycle)
     ngx_stat_active = (ngx_atomic_t *) (shared + 6 * cl);
     ngx_stat_reading = (ngx_atomic_t *) (shared + 7 * cl);
     ngx_stat_writing = (ngx_atomic_t *) (shared + 8 * cl);
+    ngx_stat_waiting = (ngx_atomic_t *) (shared + 9 * cl);
 
 #endif
 
@@ -603,12 +594,19 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         ngx_use_accept_mutex = 0;
     }
 
-#if (NGX_THREADS)
-    ngx_posted_events_mutex = ngx_mutex_init(cycle->log, 0);
-    if (ngx_posted_events_mutex == NULL) {
-        return NGX_ERROR;
-    }
+#if (NGX_WIN32)
+
+    /*
+     * disable accept mutex on win32 as it may cause deadlock if
+     * grabbed by a process which can't accept connections
+     */
+
+    ngx_use_accept_mutex = 0;
+
 #endif
+
+    ngx_queue_init(&ngx_posted_accept_events);
+    ngx_queue_init(&ngx_posted_events);
 
     if (ngx_event_timer_init(cycle->log) == NGX_ERROR) {
         return NGX_ERROR;
@@ -698,10 +696,6 @@ ngx_event_process_init(ngx_cycle_t *cycle)
     for (i = 0; i < cycle->connection_n; i++) {
         rev[i].closed = 1;
         rev[i].instance = 1;
-#if (NGX_THREADS)
-        rev[i].lock = &c[i].lock;
-        rev[i].own_lock = &c[i].lock;
-#endif
     }
 
     cycle->write_events = ngx_alloc(sizeof(ngx_event_t) * cycle->connection_n,
@@ -713,10 +707,6 @@ ngx_event_process_init(ngx_cycle_t *cycle)
     wev = cycle->write_events;
     for (i = 0; i < cycle->connection_n; i++) {
         wev[i].closed = 1;
-#if (NGX_THREADS)
-        wev[i].lock = &c[i].lock;
-        wev[i].own_lock = &c[i].lock;
-#endif
     }
 
     i = cycle->connection_n;
@@ -731,10 +721,6 @@ ngx_event_process_init(ngx_cycle_t *cycle)
         c[i].fd = (ngx_socket_t) -1;
 
         next = &c[i];
-
-#if (NGX_THREADS)
-        c[i].lock = 0;
-#endif
     } while (i);
 
     cycle->free_connections = next;

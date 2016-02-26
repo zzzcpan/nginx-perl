@@ -105,11 +105,14 @@ ngx_reset_pool(ngx_pool_t *pool)
         }
     }
 
-    pool->large = NULL;
-
     for (p = pool; p; p = p->d.next) {
         p->d.last = (u_char *) p + sizeof(ngx_pool_t);
+        p->d.failed = 0;
     }
+
+    pool->current = pool;
+    pool->chain = NULL;
+    pool->large = NULL;
 }
 
 
@@ -178,7 +181,7 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size)
 {
     u_char      *m;
     size_t       psize;
-    ngx_pool_t  *p, *new, *current;
+    ngx_pool_t  *p, *new;
 
     psize = (size_t) (pool->d.end - (u_char *) pool);
 
@@ -197,17 +200,13 @@ ngx_palloc_block(ngx_pool_t *pool, size_t size)
     m = ngx_align_ptr(m, NGX_ALIGNMENT);
     new->d.last = m + size;
 
-    current = pool->current;
-
-    for (p = current; p->d.next; p = p->d.next) {
+    for (p = pool->current; p->d.next; p = p->d.next) {
         if (p->d.failed++ > 4) {
-            current = p->d.next;
+            pool->current = p->d.next;
         }
     }
 
     p->d.next = new;
-
-    pool->current = current ? current : new;
 
     return m;
 }
