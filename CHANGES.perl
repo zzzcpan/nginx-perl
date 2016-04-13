@@ -1,4 +1,7 @@
 
+1.8.1.9 Wed Apr 13 22:42:54 EEST 2016
+	- bugfix: missing patches from nginx.xs;
+
 1.8.1.8 Fri Feb 26 23:13:16 EET 2016
 	- merged with nginx-1.8.1;
 

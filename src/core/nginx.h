@@ -10,7 +10,7 @@
 
 
 #define nginx_version      1008001
-#define NGINX_VERSION      "1.8.1.8"
+#define NGINX_VERSION      "1.8.1.9"
 #define NGINX_VER          "nginx-perl/" NGINX_VERSION
 
 #ifdef NGX_BUILD
