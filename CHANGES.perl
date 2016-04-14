@@ -1,4 +1,7 @@
 
+1.8.1.10  Thu Apr 14 03:49:51 EEST 2016
+	- bugfix: missed part of the patch in previous release;
+
 1.8.1.9 Wed Apr 13 22:42:54 EEST 2016
 	- bugfix: missing patches from nginx.xs;
 
