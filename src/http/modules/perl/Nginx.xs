@@ -562,6 +562,15 @@ request_body(r)
         ngx_buf_t           *buf;
         ngx_chain_t         *cl;
 
+        ngx_http_perl_set_request(r);
+
+        if (r->request_body == NULL
+            || r->request_body->temp_file
+            || r->request_body->bufs == NULL)
+        {
+            XSRETURN_UNDEF;
+        }
+
         cl = r->request_body->bufs;
         buf = cl->buf;
 
