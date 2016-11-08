@@ -1489,7 +1489,7 @@ ngx_timer(after, repeat, cb)
     CODE:
         ngx_connection_t *c;
 
-        c = ngx_perl_timer((ngx_int_t)SvIV(ST(0)), ST(1), ST(2));
+        c = ngx_perl_timer((ngx_int_t)(SvNV(ST(0))*1000), ST(1), ST(2));
         if (c == NULL) {
             croak("ngx_perl_timer returned NULL");
         }

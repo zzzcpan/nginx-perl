@@ -1471,7 +1471,7 @@ ngx_perl_timer(ngx_int_t after, SV *repeat, SV *cb)
     SvREFCNT_inc(t->repeat);
     SvREFCNT_inc(t->cb);
 
-    ngx_add_timer(c->read, t->after * 1000);
+    ngx_add_timer(c->read, t->after);
 
     return c;
 }
@@ -1552,8 +1552,8 @@ ngx_perl_timer_callback(ngx_event_t *ev)
 
     SvREFCNT_dec(cb);
 
-    if (!c->destroyed && SvOK(t->repeat) && SvIV(t->repeat) > 0) {
-        ngx_add_timer(ev, SvIV(t->repeat) * 1000);
+    if (!c->destroyed && SvOK(t->repeat) && SvNV(t->repeat) > 0) {
+        ngx_add_timer(ev, (ngx_int_t)(SvNV(t->repeat)*1000));
     } else {
         ngx_perl_timer_clear(c);
     }
